@@ -1,28 +1,146 @@
 from lib import engine
 import math
 
-# TODO: Consider making ice beam, first priority is basic bullets
-# TODO: Make Samus do "screw attack", animate first then make it destroy enemies, just destroy the game object for now
 # TODO: Load all rooms for now, later we can figure out how to load them up (memory management)
-# TODO: Create powerup item: screw attack first, she's a little ball and it will look pretty good to have it destroy the fliying monster, GameObject.JumpComponent
-# TODO: Powerup item is GameObject: need icon, can be a simple square?
-# TODO: Room 1: practice, Room 2: flying monster, Room 3: powerup/"screw attack"
-# TODO: Go back to room 2 with screw attack
-# TODO: Go back to room 1 with new monster/"the ground huggers" on a high platform, can kill with bullets by jumping straight up but can't bomb it yet
-# TODO: make it so that touching GroundHugger backs up Samus or knocks her off the ledge
-# TODO: Create 2 different monsters with 3 rooms: see above
-
-# 4. Create bombs - full attack capabilities
-# 5. Third room with screw attack powerup
-
 # TODO: bugfix: one bullet goes through right wall per jump
 # TODO: bugfix: bug creatures fly through a platform
-# TODO: bugfix: entering tilemap1 from door, door sprite malfunctions for one frame, must be set to 1 instead of 0???
-# TODO: bugfix: I noticed the zoomer sprites also malfunction on the first frame.....
-# TODO: bugfix: consider making it so that all bugs always reset when you have moved far enough away: don't reset on current screen though
 
-# TODO: change starting position to member variable/constant (Samus)
-# TODO: bugfix: Samus moves left on repeated aim-up jumping: this is because the sprite goes through the floor the first frame it changes.....
+
+###############################################################################################################################################################
+
+class ExplodableTile:
+    def __init__(self, xPos, yPos, tileSize, tilemap, sdl):
+        self.tileSize = tileSize
+        self.active = True
+        self.xPos = xPos
+        self.yPos = yPos
+        self.tilemap = tilemap
+        self.sdl = sdl
+        self.countDownMax = 200
+        self.countDownNum = self.countDownMax
+
+        self.tileObject = engine.GameObject()
+        self.tilePhysics = engine.PhysicsComponent()
+        self.tileTransform = engine.Transform()
+        self.tileTransform.xPos = self.xPos
+        self.tileTransform.yPos = self.yPos
+        # (width of sprite, height of sprite, start x, start y, max num sprites in a row, total num sprites, numPixelsToTrimFromWidth)
+        self.tile_sprite = engine.Sprite(self.tileTransform, True)
+        self.tile_sprite.setRectangleDimensions(self.tileSize, self.tileSize)
+        self.tile_sprite.setSpriteSheetDimensions(36, 36, 22, 70, 1, 1, 0)
+        self.tile_sprite.loadImage('Assets/tilesets/Metroid_Tileset_2.png', self.sdl.getSDLRenderer())
+        self.tile_sprite.update(0, 0, 0)
+        self.tileObject.addTileMapComponent(self.tilemap)
+        self.tileObject.addPhysicsComponent(self.tilePhysics)
+        self.tileObject.addTransformComponent(self.tileTransform)
+        self.tileObject.addSpriteComponent(self.tile_sprite)
+    def decrementCountDown(self, obj):
+        if not self.active:
+            self.countDownNum -= 1
+            if self.countDownNum <= 0:
+                if not self.checkIfColliding(obj):
+                    self.countDownNum = self.countDownMax
+                    self.active = True
+    def checkIfColliding(self, obj):
+        x1 = self.tileObject.mTransform.xPos
+        y1 = self.tileObject.mTransform.yPos
+        width1 = self.tileObject.mSprite.getWidth()
+        height1 = self.tileObject.mSprite.getHeight()
+        x2 = obj.mTransform.xPos
+        y2 = obj.mTransform.yPos
+        width2 = obj.mSprite.getWidth()
+        height2 = obj.mSprite.getHeight()
+        if (x1 < x2 + width2 and x1 + width1 > x2 and
+                y1 < y2 + height2 and y1 + height1 > y2):
+            return True
+        return False
+    def isActive(self):
+        return self.active
+    # def getXPos(self):
+    #     return self.xPos
+    # def getYpos(self):
+    #     return self.yPos
+    def getTileObject(self):
+        return self.tileObject
+    def explodeTile(self):
+        self.active = False
+    
+class Bomb:
+    def __init__(self, tilemap, sdl):
+        self.tilemap = tilemap
+        self.sdl = sdl
+        self.bombWidth = 16
+        self.bombHeight = 16
+        self.explosionWidth = 100
+        self.explosionHeight = 100
+        self.curFrameCount = 0
+        self.bombFrameAddition = 0.5
+        self.explosionFrameAddition = 0.5
+        self.exploding = False
+        self.destroy = False
+        self.countDownNum = 26
+        self.enemyArr = []
+
+        self.bombObject = engine.GameObject()
+        self.bombPhysics = engine.PhysicsComponent()
+        self.bombTransform = engine.Transform()
+        # (width of sprite, height of sprite, start x, start y, max num sprites in a row, total num sprites, numPixelsToTrimFromWidth)
+        self.ticking_sprite = engine.Sprite(self.bombTransform, True)
+        self.ticking_sprite.setRectangleDimensions(self.bombWidth, self.bombHeight)
+        self.ticking_sprite.setSpriteSheetDimensions(16, 8, 336, 248, 2, 2, 8)
+        self.ticking_sprite.loadImage('Assets/spritesheets/revamped_samus_sprites2.png', self.sdl.getSDLRenderer())
+        self.explosion_sprite = engine.Sprite(self.bombTransform, True)
+        self.explosion_sprite.setRectangleDimensions(self.explosionWidth, self.explosionHeight)
+        self.explosion_sprite.setSpriteSheetDimensions(200, 200, 0, 0, 3, 7, 0)
+        self.explosion_sprite.loadImage('Assets/spritesheets/explosion_1.png', self.sdl.getSDLRenderer())
+        self.bombObject.addTileMapComponent(self.tilemap)
+        self.bombObject.addPhysicsComponent(self.bombPhysics)
+        self.bombObject.addTransformComponent(self.bombTransform)
+        self.bombObject.addSpriteComponent(self.ticking_sprite)
+    def changeToExplosionSprite(self):
+        self.bombObject.addSpriteComponent(self.explosion_sprite)
+        self.bombObject.mTransform.xPos = int(self.xPos + self.bombWidth/2 - self.explosionWidth/2)
+        self.bombObject.mTransform.yPos = int(self.yPos + self.bombHeight/2 - self.explosionHeight/2)
+        self.exploding = True
+        self.curFrameCount = -1
+    def incrementCurrentFrameCount(self):
+        if self.exploding:
+            self.curFrameCount += self.explosionFrameAddition
+            if int(self.curFrameCount) >= 7:
+                self.destroy = True
+        else:
+            self.curFrameCount += self.bombFrameAddition
+            if int(self.curFrameCount) >= 2:
+                self.curFrameCount = 0
+    def decrementCountDown(self):
+        if not self.exploding:
+            self.countDownNum -= 1
+            if self.countDownNum <= 0:
+                self.changeToExplosionSprite()
+    def isTimeToDestroy(self):
+        # if it is time to destroy, don't update the sprite
+        return self.destroy
+    def getCurrentFrameCount(self):
+        # must convert to int to use for sprite
+        return self.curFrameCount
+    def isExploding(self):
+        return self.exploding
+    def getBombWidth(self):
+        return self.bombWidth
+    def getBombHeight(self):
+        return self.bombHeight
+    def setBombPosition(self, xPos, yPos):
+        self.xPos = xPos
+        self.yPos = yPos
+        self.bombTransform.xPos = xPos
+        self.bombTransform.yPos = yPos
+    def getBombObject(self):
+        return self.bombObject
+    def getEnemyArr(self):
+        return self.enemyArr
+    def addEnemyToHitArray(self, enemyString):
+        self.enemyArr.append(enemyString)
+
 
 class Zoomer:
     def __init__(self, zoomerObject, origOrientation, isClockwise):
@@ -105,6 +223,8 @@ class Zoomer:
         return self.maxFrameCountArr[idx]
     def getZoomerObject(self):
         return self.zoomerObject
+    def getOriginalYPos(self):
+        return self.originalYPos
     def checkIfColliding(self, obj):
         x1 = self.zoomerObject.mTransform.xPos
         y1 = self.zoomerObject.mTransform.yPos
@@ -364,11 +484,12 @@ class BubbleDoor:
                             return -i
                 elif self.yPos + h <= obj.mTransform.yPos <= self.yPos + self.height - 1:
                     # bottom half of door
-                    x = obj.mTransform.xPos + obj.mSprite.getWidth()
-                    y = obj.mTransform.yPos
-                    for i in range(1, 60):
-                        if ((x - self.cx) ** 2) / (self.width ** 2) + ((y + i - self.cy) ** 2) / (h ** 2) >= 1:
-                            return i
+                    # x = obj.mTransform.xPos + obj.mSprite.getWidth()
+                    # y = obj.mTransform.yPos
+                    # for i in range(1, 60):
+                    #     if ((x - self.cx) ** 2) / (self.width ** 2) + ((y + i - self.cy) ** 2) / (h ** 2) >= 1:
+                    #         return i
+                    return 0
                 elif self.yPos - obj.mSprite.getHeight() + 1 <= obj.mTransform.yPos <= self.yPos + self.height - 1:
                     # middle of door: use half of height for y
                     return 0
@@ -382,11 +503,12 @@ class BubbleDoor:
                             return -i
                 elif self.yPos + h <= obj.mTransform.yPos <= self.yPos + self.height - 1:
                     # bottom half of door
-                    x = obj.mTransform.xPos
-                    y = obj.mTransform.yPos
-                    for i in range(1, 60):
-                        if ((x - self.cx) ** 2) / (self.width ** 2) + ((y + i - self.cy) ** 2) / (h ** 2) >= 1:
-                            return i
+                    # x = obj.mTransform.xPos
+                    # y = obj.mTransform.yPos
+                    # for i in range(1, 60):
+                    #     if ((x - self.cx) ** 2) / (self.width ** 2) + ((y + i - self.cy) ** 2) / (h ** 2) >= 1:
+                    #         return i
+                    return 0
                 elif self.yPos - obj.mSprite.getHeight() + 1 <= obj.mTransform.yPos <= self.yPos + self.height - 1:
                     # middle of door: use half of height for y
                     return 0
@@ -416,16 +538,20 @@ class Game:
         self.tilemap2.loadTileset("Assets/tilesets/Metroid_Tileset_2.bmp", self.sdl.getSDLRenderer())
         self.tilemap3 = engine.TileMapComponent("Assets/Levels/BrinstarTiles/metroid_practice_3.lvl", 21, 70)
         self.tilemap3.loadTileset("Assets/tilesets/Metroid_Tileset_2.bmp", self.sdl.getSDLRenderer())
+        self.tilemap4 = engine.TileMapComponent("Assets/Levels/BrinstarTiles/metroid_practice_4.lvl", 21, 70)
+        self.tilemap4.loadTileset("Assets/tilesets/Metroid_Tileset_2.bmp", self.sdl.getSDLRenderer())
         # tilemap side or vertical dict
         self.sideOrVertDict = {}
         self.sideOrVertDict[str(self.tilemap1)] = "horizontal"
         self.sideOrVertDict[str(self.tilemap2)] = "horizontal"
         self.sideOrVertDict[str(self.tilemap3)] = "vertical"
+        self.sideOrVertDict[str(self.tilemap4)] = "horizontal"
         # tilemap adjacency dict
         self.tilemapAdjacencyDict = {}
         self.tilemapAdjacencyDict[str(self.tilemap1)] = {"left1": None, "right1": self.tilemap2}
         self.tilemapAdjacencyDict[str(self.tilemap2)] = {"left1": self.tilemap1, "right1": self.tilemap3}
-        self.tilemapAdjacencyDict[str(self.tilemap3)] = {"left1": self.tilemap2, "right1": None}
+        self.tilemapAdjacencyDict[str(self.tilemap3)] = {"left1": self.tilemap2, "right1": self.tilemap4}
+        self.tilemapAdjacencyDict[str(self.tilemap4)] = {"left1": self.tilemap3, "right1": None}
         # set self.tilemap
         self.tilemap = self.tilemap1 # TODO: switch back to tilemap1
         self.tileSize = self.tilemap.getSize() # 36
@@ -448,15 +574,127 @@ class Game:
         self.player.addTransformComponent(self.playerTransform)
         self.playerTransform.xPos = self.playerStartXPos
         self.playerTransform.yPos = self.playerStartYPos
-
-        # Setup PlayerState
-        self.playerState = PlayerState()
-
+        # Player Tilemap Component
+        self.player.addTileMapComponent(self.tilemap)
+        # Player Physics Component
+        self.player.addPhysicsComponent(self.physics)
         #int _height, int _total_distance, float _xVelocity, int _gravity_factor
         self.playerJump = engine.JumpComponent(-200, 500, 6, -2)
         self.player.addJumpComponent(self.playerJump)
+        # Setup PlayerState
+        self.playerState = PlayerState()
 
         self.maxFrameDict = {}
+        
+        self.createPlayerSprites()
+
+        self.lvlHeight1 = self.tilemap1.getRows() * self.tileSize
+        self.lvlWidth1 = self.tilemap1.getCols() * self.tileSize
+        self.lvlHeight2 = self.tilemap2.getRows() * self.tileSize
+        self.lvlWidth2 = self.tilemap2.getCols() * self.tileSize
+        self.lvlHeight3 = self.tilemap3.getRows() * self.tileSize
+        self.lvlWidth3 = self.tilemap3.getCols() * self.tileSize
+        self.lvlWidth4 = self.tilemap4.getCols() * self.tileSize
+        self.lvlHeight4 = self.tilemap4.getRows() * self.tileSize
+        # Door objects
+        self.createDoorObjects()
+        # Bubble Doors
+        self.createBubbleDoorObjects()
+        # Dictionary containing all monsters for level
+        self.enemiesDict = {}
+        
+        # Flying monsters(bugs)
+        self.createBugs()
+        # Zoomers
+        self.createZoomers()
+        # powerup sprites
+        self.createPowerUpObjects()
+        # explodable tiles
+        self.createExplodableTiles()
+
+        # Camera Setup
+        self.camera = engine.SpriteSideScrollerCamera(self.windowWidth, self.windowHeight, self.lvlWidth, 
+                                                 self.lvlHeight, self.player.mSprite)
+        #self.camera = engine.SpriteVerticalScrollerCamera(self.windowWidth, self.windowHeight, self.lvlWidth, 
+        #                                        self.lvlHeight, self.player.mSprite)
+        self.cameraOffsetX = 0
+        self.cameraOffsetY = 0
+
+        '''
+        Need to keep track of number of frames in the sprite sheet. 
+        '''
+        self.currentFrame = 0
+        self.currentMaxFrame = self.maxFrameDict[str(self.idle_right)]
+
+        # Sounds
+        self.music = engine.Music()
+        self.music.SetMusic("Assets/Sounds/78 - Brinstar (Rock Stage).mp3")
+        # self.gameOverSound = engine.Sound()
+        # self.gameOverSound.SetSound("Assets/Sounds/GameOver.wav")
+        # self.winSound = engine.Sound()
+        # self.winSound.SetSound("Assets/Sounds/Win.wav")
+        # self.jumpSound = engine.Sound()
+        # self.jumpSound.SetSound("Assets/Sounds/Jump.wav")
+        # self.speedUpSound = engine.Sound()
+        # self.speedUpSound.SetSound("Assets/Sounds/SpeedUp.wav")
+
+        # Player Settings
+        self.playerRunSpeed = 6
+        self.playerFallingSpeed = 10
+        self.curYDirection = 1 # must be 1 or -1
+        self.curXDirection = 1 # must be 1 or -1
+        self.diffBetweenStandingAndDucking = abs(self.aim_up_idle_right.getHeight() - self.duck_right.getHeight())
+        self.diffBetweenDuckingAndRolling = abs(self.duck_right.getHeight() - self.roll_right.getHeight())
+        self.diffBetweenStandingAndFalling = abs(self.idle_right.getHeight() - self.falling_right.getHeight())
+        
+        self.isFirstRollingFrame = False
+        self.waitOneCycleForJumpUpdate = False
+        self.waitOneCycleToInitiateJump = False
+        self.uprightJump = False
+        self.isFirstStandingFrame = False
+        self.shootingCounterMax = 10
+        self.shootingCounter = self.shootingCounterMax + 1
+        self.playerIsHit = False
+        self.backupLeft = False
+        self.backupRight = False
+        self.hitTimer = 0 
+        self.maxHitTimer = 15
+        self.backupXDiff = 4
+        self.hasScrewAttack = False
+
+        # Variables for bullets
+        self.bulletDict = {}
+        self.bulletSpeed = 12
+        self.shotPauseMax = 5
+        self.shotPauseTimer = self.shotPauseMax + 1
+        self.shotLifeMax = 30
+        self.bulletIndex = 0
+        self.spriteDict = {}
+        self.transformDict = {}
+        self.physicsDict = {}
+        self.waitOneFrameForShot = True
+
+        # Bomb variables
+        self.bombArr = []
+        self.numFramesBetweenBombs = 8
+        self.countDownBetweenBombs = 0
+
+        # Game Variables
+        self.player.xVel = self.playerRunSpeed
+        self.player.yVel = self.playerFallingSpeed
+        self.bugFrameIncrement = 0.33334
+        self.zoomerFrameIncrement = 0.25
+        
+        # Frame capping variables
+        targetFPS = 40 # TODO: set back to 40
+        self.maxTicksPerFrame = int(1000 / targetFPS); # 16.66ms per frame?
+        self.frameStartTime = 0
+        self.frame_count = 0
+        self.startTime = self.sdl.getTimeMS()
+        self.frameUpdateDelay = 0
+        self.maxFrameUpdateDelay = 2
+
+    def createPlayerSprites(self):
         '''
         CREATE A SPRITE
         Spritesheets should be located in the Assets folder. Use the "loadImage"
@@ -603,11 +841,20 @@ class Game:
         self.shooting_falling_left.loadImage('Assets/spritesheets/MetroidSpritesheet2.png', self.sdl.getSDLRenderer())
         self.maxFrameDict[str(self.shooting_falling_left)] = 0
 
-        # Door sprites
-        self.doorObjectsDict = {}
+        self.screw_attack_left = engine.Sprite(self.playerTransform, True)
+        self.screw_attack_left.setRectangleDimensions(48, 48)
+        self.screw_attack_left.setSpriteSheetDimensions(33, 35, 136, 400, 4, 4, 0)
+        self.screw_attack_left.loadImage('Assets/spritesheets/MetroidSpritesheet2.png', self.sdl.getSDLRenderer())
+        self.maxFrameDict[str(self.screw_attack_left)] = 3
 
-        self.lvlHeight1 = self.tilemap1.getRows() * self.tileSize
-        self.lvlWidth1 = self.tilemap1.getCols() * self.tileSize
+        self.screw_attack_right = engine.Sprite(self.playerTransform, True)
+        self.screw_attack_right.setRectangleDimensions(48, 48)
+        self.screw_attack_right.setSpriteSheetDimensions(33, 35, 1, 400, 4, 4, 0)
+        self.screw_attack_right.loadImage('Assets/spritesheets/MetroidSpritesheet2.png', self.sdl.getSDLRenderer())
+        self.maxFrameDict[str(self.screw_attack_right)] = 3
+
+    def createDoorObjects(self):
+        self.doorObjectsDict = {}
 
         self.doorObject = engine.GameObject()
         self.doorPhysics = engine.PhysicsComponent()
@@ -652,9 +899,6 @@ class Game:
         self.doorObject3.addSpriteComponent(self.door_block_sprite3)
 
         self.doorObjectsDict[str(self.tilemap1)] = [self.doorObject, self.doorObject2, self.doorObject3]
-
-        self.lvlHeight2 = self.tilemap2.getRows() * self.tileSize
-        self.lvlWidth2 = self.tilemap2.getCols() * self.tileSize
 
         self.doorObject4 = engine.GameObject()
         self.doorPhysics4 = engine.PhysicsComponent()
@@ -746,9 +990,6 @@ class Game:
         self.doorObjectsDict[str(self.tilemap2)].append(self.doorObject8)
         self.doorObjectsDict[str(self.tilemap2)].append(self.doorObject9)
 
-        # level height for tilemap3
-        self.lvlHeight3 = self.tilemap3.getRows() * self.tileSize
-
         self.doorObject10 = engine.GameObject()
         self.doorPhysics10 = engine.PhysicsComponent()
         self.doorTransform10 = engine.Transform()
@@ -791,10 +1032,97 @@ class Game:
         self.doorObject12.addTransformComponent(self.doorTransform12)
         self.doorObject12.addSpriteComponent(self.door_block_sprite12)
 
-        self.doorObjectsDict[str(self.tilemap3)] = [self.doorObject10, self.doorObject11, self.doorObject12]
+        self.doorObject13 = engine.GameObject()
+        self.doorPhysics13 = engine.PhysicsComponent()
+        self.doorTransform13 = engine.Transform()
+        self.doorTransform13.xPos = self.lvlWidth3 - self.tileSize + 1
+        self.doorTransform13.yPos = self.tileSize * 7
+        self.door_block_sprite13 = engine.Sprite(self.doorTransform13, True)
+        self.door_block_sprite13.setRectangleDimensions(self.tileSize, self.tileSize)
+        self.door_block_sprite13.setSpriteSheetDimensions(34, 32, 299, 303, 1, 1, 0)
+        self.door_block_sprite13.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.doorObject13.addTileMapComponent(self.tilemap3)
+        self.doorObject13.addPhysicsComponent(self.doorPhysics13)
+        self.doorObject13.addTransformComponent(self.doorTransform13)
+        self.doorObject13.addSpriteComponent(self.door_block_sprite13)
 
-        # Bubble Doors
+        self.doorObject14 = engine.GameObject()
+        self.doorPhysics14 = engine.PhysicsComponent()
+        self.doorTransform14 = engine.Transform()
+        self.doorTransform14.xPos = self.lvlWidth3 - self.tileSize + 1
+        self.doorTransform14.yPos = self.tileSize * 8
+        self.door_block_sprite14 = engine.Sprite(self.doorTransform14, True)
+        self.door_block_sprite14.setRectangleDimensions(self.tileSize, self.tileSize)
+        self.door_block_sprite14.setSpriteSheetDimensions(34, 32, 299, 303, 1, 1, 0)
+        self.door_block_sprite14.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.doorObject14.addTileMapComponent(self.tilemap3)
+        self.doorObject14.addPhysicsComponent(self.doorPhysics14)
+        self.doorObject14.addTransformComponent(self.doorTransform14)
+        self.doorObject14.addSpriteComponent(self.door_block_sprite14)
+
+        self.doorObject15 = engine.GameObject()
+        self.doorPhysics15 = engine.PhysicsComponent()
+        self.doorTransform15 = engine.Transform()
+        self.doorTransform15.xPos = self.lvlWidth3 - self.tileSize + 1
+        self.doorTransform15.yPos = self.tileSize * 9
+        self.door_block_sprite15 = engine.Sprite(self.doorTransform15, True)
+        self.door_block_sprite15.setRectangleDimensions(self.tileSize, self.tileSize)
+        self.door_block_sprite15.setSpriteSheetDimensions(34, 32, 299, 303, 1, 1, 0)
+        self.door_block_sprite15.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.doorObject15.addTileMapComponent(self.tilemap3)
+        self.doorObject15.addPhysicsComponent(self.doorPhysics15)
+        self.doorObject15.addTransformComponent(self.doorTransform15)
+        self.doorObject15.addSpriteComponent(self.door_block_sprite15)
+
+        self.doorObjectsDict[str(self.tilemap3)] = [self.doorObject10, self.doorObject11, self.doorObject12, self.doorObject13, self.doorObject14, self.doorObject15]
+
+        self.doorObject16 = engine.GameObject()
+        self.doorPhysics16 = engine.PhysicsComponent()
+        self.doorTransform16 = engine.Transform()
+        self.doorTransform16.xPos = 0
+        self.doorTransform16.yPos = self.tileSize * 7
+        self.door_block_sprite16 = engine.Sprite(self.doorTransform16, True)
+        self.door_block_sprite16.setRectangleDimensions(self.tileSize, self.tileSize)
+        self.door_block_sprite16.setSpriteSheetDimensions(34, 32, 299, 303, 1, 1, 0)
+        self.door_block_sprite16.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.doorObject16.addTileMapComponent(self.tilemap4)
+        self.doorObject16.addPhysicsComponent(self.doorPhysics16)
+        self.doorObject16.addTransformComponent(self.doorTransform16)
+        self.doorObject16.addSpriteComponent(self.door_block_sprite16)
+
+        self.doorObject17 = engine.GameObject()
+        self.doorPhysics17 = engine.PhysicsComponent()
+        self.doorTransform17 = engine.Transform()
+        self.doorTransform17.xPos = 0
+        self.doorTransform17.yPos = self.tileSize * 8
+        self.door_block_sprite17 = engine.Sprite(self.doorTransform17, True)
+        self.door_block_sprite17.setRectangleDimensions(self.tileSize, self.tileSize)
+        self.door_block_sprite17.setSpriteSheetDimensions(34, 32, 299, 303, 1, 1, 0)
+        self.door_block_sprite17.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.doorObject17.addTileMapComponent(self.tilemap4)
+        self.doorObject17.addPhysicsComponent(self.doorPhysics17)
+        self.doorObject17.addTransformComponent(self.doorTransform17)
+        self.doorObject17.addSpriteComponent(self.door_block_sprite17)
+
+        self.doorObject18 = engine.GameObject()
+        self.doorPhysics18 = engine.PhysicsComponent()
+        self.doorTransform18 = engine.Transform()
+        self.doorTransform18.xPos = 0
+        self.doorTransform18.yPos = self.tileSize * 9
+        self.door_block_sprite18 = engine.Sprite(self.doorTransform18, True)
+        self.door_block_sprite18.setRectangleDimensions(self.tileSize, self.tileSize)
+        self.door_block_sprite18.setSpriteSheetDimensions(34, 32, 299, 303, 1, 1, 0)
+        self.door_block_sprite18.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.doorObject18.addTileMapComponent(self.tilemap4)
+        self.doorObject18.addPhysicsComponent(self.doorPhysics18)
+        self.doorObject18.addTransformComponent(self.doorTransform18)
+        self.doorObject18.addSpriteComponent(self.door_block_sprite18)
+
+        self.doorObjectsDict[str(self.tilemap4)] = [self.doorObject16, self.doorObject17, self.doorObject18]
+
+    def createBubbleDoorObjects(self):
         self.bubbleDoorDict = {}
+
         # xPos, yPos, width, height, facingLeft
         self.bubbleDoor1 = BubbleDoor(self.lvlWidth1 - self.tileSize - 24, self.lvlHeight1 - (self.tileSize * 9), 
                                       24, self.tileSize * 3, True)
@@ -869,7 +1197,43 @@ class Game:
         self.bubbleDoor4.setCurrentSpriteComponent(0)
         self.bubbleDoorDict[str(self.tilemap3)] = [self.bubbleDoor4]
 
-        # Flying monsters
+        self.bubbleDoor5 = BubbleDoor(self.lvlWidth3 - self.tileSize - 24, self.tileSize * 7, 
+                                      24, self.tileSize * 3, True)
+        self.bubbleTransform5 = engine.Transform()
+        self.bubbleTransform5.xPos = self.lvlWidth3 - self.tileSize - 24
+        self.bubbleTransform5.yPos = self.tileSize * 7
+        self.bubble_sprite5_1 = engine.Sprite(self.bubbleTransform5, False)
+        self.bubble_sprite5_1.setRectangleDimensions(24, self.tileSize * 3)
+        self.bubble_sprite5_1.setSpriteSheetDimensions(19, 97, 1136, 600, 1, 1, 0)
+        self.bubble_sprite5_1.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.bubbleDoor5.addSpriteComponent(self.bubble_sprite5_1, 0)
+        self.bubble_sprite5_2 = engine.Sprite(self.bubbleTransform5, False)
+        self.bubble_sprite5_2.setRectangleDimensions(24, self.tileSize * 3)
+        self.bubble_sprite5_2.setSpriteSheetDimensions(19, 97, 1099, 600, 1, 1, 0)
+        self.bubble_sprite5_2.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.bubbleDoor5.addSpriteComponent(self.bubble_sprite5_2, 1)
+        self.bubbleDoor5.setCurrentSpriteComponent(0)
+        self.bubbleDoorDict[str(self.tilemap3)].append(self.bubbleDoor5)
+
+        self.bubbleDoor6 = BubbleDoor(self.tileSize, self.tileSize * 7, 
+                                      24, self.tileSize * 3, False)
+        self.bubbleTransform6 = engine.Transform()
+        self.bubbleTransform6.xPos = self.tileSize
+        self.bubbleTransform6.yPos = self.tileSize * 7
+        self.bubble_sprite6_1 = engine.Sprite(self.bubbleTransform6, True)
+        self.bubble_sprite6_1.setRectangleDimensions(24, self.tileSize * 3)
+        self.bubble_sprite6_1.setSpriteSheetDimensions(19, 97, 1140, 600, 1, 1, 0)
+        self.bubble_sprite6_1.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.bubbleDoor6.addSpriteComponent(self.bubble_sprite6_1, 0)
+        self.bubble_sprite6_2 = engine.Sprite(self.bubbleTransform6, True)
+        self.bubble_sprite6_2.setRectangleDimensions(24, self.tileSize * 3)
+        self.bubble_sprite6_2.setSpriteSheetDimensions(19, 97, 1177, 600, 1, 1, 0)
+        self.bubble_sprite6_2.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.bubbleDoor6.addSpriteComponent(self.bubble_sprite6_2, 1)
+        self.bubbleDoor6.setCurrentSpriteComponent(0)
+        self.bubbleDoorDict[str(self.tilemap4)] = [self.bubbleDoor6]
+
+    def createBugs(self):
         self.bugObject1 = engine.GameObject()
         self.bugPhysics1 = engine.PhysicsComponent()
         self.bugTransform1 = engine.Transform()
@@ -996,6 +1360,15 @@ class Game:
         self.bug4.addSpriteToList(self.bug_sprite_4_3, 2)
         self.bug4.setActiveStatus(True)
 
+        self.bugArray = []
+        self.bugArray.append(self.bug1)
+        self.bugArray.append(self.bug2)
+        self.bugArray.append(self.bug3)
+        self.bugArray.append(self.bug4)
+
+        self.enemiesDict[str(self.tilemap2)] = {"bugArray" : self.bugArray}
+
+    def createZoomers(self):
         '''
         "setSpriteSheetDimensions" is for correctly iterating through the spritesheet.
         (width of sprite, height of sprite, start x, start y, max num sprites in a row, total num sprites, numPixelsToTrimFromWidth)
@@ -2094,12 +2467,6 @@ class Game:
         self.zoomerObject32.xVel = self.zoomer32.getCurrentXVelocity()
         self.zoomerObject32.yVel = self.zoomer32.getCurrentYVelocity()
 
-        self.bugArray = []
-        self.bugArray.append(self.bug1)
-        self.bugArray.append(self.bug2)
-        self.bugArray.append(self.bug3)
-        self.bugArray.append(self.bug4)
-
         self.zoomerArray = []
         self.zoomerArray.append(self.zoomer1)
         self.zoomerArray.append(self.zoomer2)
@@ -2134,99 +2501,55 @@ class Game:
         self.zoomerArray.append(self.zoomer31)
         self.zoomerArray.append(self.zoomer32)
 
-        # Dictionary containing all monsters for level
-        self.enemiesDict = {}
-        self.enemiesDict[str(self.tilemap2)] = {"bugArray" : self.bugArray}
         self.enemiesDict[str(self.tilemap3)] = {"zoomerArray": self.zoomerArray}
 
-        # Player Tilemap Component
-        self.player.addTileMapComponent(self.tilemap)
-        # Player Physics Component
-        self.player.addPhysicsComponent(self.physics)
+    def createPowerUpObjects(self):
+        self.screwAttackObject = engine.GameObject()
+        self.screwAttackPhysics = engine.PhysicsComponent()
+        self.screwAttackTransform = engine.Transform()
+        self.screwAttackTransform.xPos = self.lvlWidth4 - (self.tileSize * 12) - 7
+        self.screwAttackTransform.yPos = self.tileSize * 9 - 14
+        self.screwAttackSprite = engine.Sprite(self.screwAttackTransform, True)
+        self.screwAttackSprite.setRectangleDimensions(50, 50)
+        self.screwAttackSprite.setSpriteSheetDimensions(24, 16, 304, 128, 2, 2, 9)
+        self.screwAttackSprite.loadImage('Assets/spritesheets/revamped_powerups.png', self.sdl.getSDLRenderer())
+        self.screwAttackObject.addPhysicsComponent(self.screwAttackPhysics)
+        self.screwAttackObject.addTransformComponent(self.screwAttackTransform)
+        self.screwAttackObject.addSpriteComponent(self.screwAttackSprite)
+        self.screwAttackObject.addTileMapComponent(self.tilemap4)
 
-        # Camera Setup
-        self.camera = engine.SpriteSideScrollerCamera(self.windowWidth, self.windowHeight, self.lvlWidth, 
-                                                 self.lvlHeight, self.player.mSprite)
-        #self.camera = engine.SpriteVerticalScrollerCamera(self.windowWidth, self.windowHeight, self.lvlWidth, 
-        #                                        self.lvlHeight, self.player.mSprite)
-        self.cameraOffsetX = 0
-        self.cameraOffsetY = 0
+        self.powerUpDict = {}
+        self.powerUpDict[str(self.tilemap4)] = self.screwAttackObject
 
-        '''
-        Need to keep track of number of frames in the sprite sheet. 
-        '''
-        self.currentFrame = 0
-        self.currentMaxFrame = self.maxFrameDict[str(self.idle_right)]
+        self.powerUpActiveDict = {}
+        self.powerUpActiveDict[str(self.tilemap4)] = True
 
-        # Sounds
-        self.music = engine.Music()
-        self.music.SetMusic("Assets/Sounds/78 - Brinstar (Rock Stage).mp3")
-        # self.gameOverSound = engine.Sound()
-        # self.gameOverSound.SetSound("Assets/Sounds/GameOver.wav")
-        # self.winSound = engine.Sound()
-        # self.winSound.SetSound("Assets/Sounds/Win.wav")
-        # self.jumpSound = engine.Sound()
-        # self.jumpSound.SetSound("Assets/Sounds/Jump.wav")
-        # self.speedUpSound = engine.Sound()
-        # self.speedUpSound.SetSound("Assets/Sounds/SpeedUp.wav")
+        self.powerUpFrameCountDict = {}
+        self.powerUpFrameCountDict[str(self.tilemap4)] = 2
 
-        # Player Settings
-        self.playerRunSpeed = 6
-        self.playerFallingSpeed = 10
-        self.curYDirection = 1 # must be 1 or -1
-        self.curXDirection = 1 # must be 1 or -1
-        self.diffBetweenStandingAndDucking = abs(self.aim_up_idle_right.getHeight() - self.duck_right.getHeight())
-        self.diffBetweenDuckingAndRolling = abs(self.duck_right.getHeight() - self.roll_right.getHeight())
-        self.diffBetweenStandingAndFalling = abs(self.idle_right.getHeight() - self.falling_right.getHeight())
-        
-        # self.spaceTapErrorLenience = 0.1
-
-        self.isFirstRollingFrame = False
-        self.waitOneCycleForJumpUpdate = False
-        self.waitOneCycleToInitiateJump = False
-        self.uprightJump = False
-        self.isFirstStandingFrame = False
-        self.shootingCounterMax = 10
-        self.shootingCounter = self.shootingCounterMax + 1
-        self.playerIsHit = False
-        self.backupLeft = False
-        self.backupRight = False
-        self.hitTimer = 0 
-        self.maxHitTimer = 15
-        self.backupXDiff = 4
-        self.lastFrameWasIdle = True
-
-        # Variables for bullets
-        self.bulletDict = {}
-        self.bulletSpeed = 12
-        self.shotPauseMax = 5
-        self.shotPauseTimer = self.shotPauseMax + 1
-        self.shotLifeMax = 30
-        self.bulletIndex = 0
-        self.spriteDict = {}
-        self.transformDict = {}
-        self.physicsDict = {}
-        self.waitOneFrameForShot = True
-
-        # Game Variables
-        self.player.xVel = self.playerRunSpeed
-        self.player.yVel = self.playerFallingSpeed
-        self.bugFrameIncrement = 0.33334
-        self.zoomerFrameIncrement = 0.25
-        
-        # Frame capping variables
-        targetFPS = 40 # TODO: set back to 40
-        self.maxTicksPerFrame = int(1000 / targetFPS); # 16.66ms per frame?
-        self.frameStartTime = 0
-        self.frame_count = 0
-        self.startTime = self.sdl.getTimeMS()
-        self.frameUpdateDelay = 0
-        self.maxFrameUpdateDelay = 2
+    def createExplodableTiles(self):
+        self.explodableTilesDict = {}
+        tileArr4 = []
+        for i in range(11):
+            xPos = self.tileSize * (39 + i)
+            yPos = self.tileSize * 16
+            tile = ExplodableTile(xPos, yPos, self.tileSize, self.tilemap4, self.sdl)
+            tileArr4.append(tile)
+        self.explodableTilesDict[str(self.tilemap4)] = tileArr4
+    
+    def changePlayerSprite(self, sprite):
+        # adjusts yPos if necessary and changes sprite
+        if sprite.getHeight() > self.player.mSprite.getHeight():
+            self.player.mTransform.yPos -= (sprite.getHeight() - self.player.mSprite.getHeight())
+        self.player.addSpriteComponent(sprite)
+        self.currentMaxFrame = self.maxFrameDict[str(sprite)]
 
     # Handles player left and right movement from input
     def handlePlayerMove(self, inputs):
+        jumpAgain = False
+        if inputs[engine.J_PRESSED]:
+            jumpAgain = True
         if (inputs[engine.LEFT_PRESSED] or inputs[engine.A_PRESSED]) and not (inputs[engine.RIGHT_PRESSED] or inputs[engine.D_PRESSED]):
-            self.lastFrameWasIdle = False
             if self.playerState.getState() == "standing":
                 self.curXDirection = -1
                 self.player.xVel = - self.playerRunSpeed
@@ -2236,39 +2559,33 @@ class Game:
                     self.isFirstStandingFrame = False
                     # change to running left
                     if self.isShooting():
-                        self.player.addSpriteComponent(self.shooting_run_left)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.shooting_run_left)]
+                        self.changePlayerSprite(self.shooting_run_left)
                     else:
-                        self.player.addSpriteComponent(self.run_left_sprite)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.run_left_sprite)]
+                        self.changePlayerSprite(self.run_left_sprite)
                         self.waitOneFrameForShot = True
-                else:
-                    if inputs[engine.UP_PRESSED] or inputs[engine.UP_TAPPED] or inputs[engine.W_PRESSED] or inputs[engine.W_TAPPED]:
-                        # adjust yPos for diff in sprites
-                        self.playerTransform.yPos -= (self.aim_up_run_left.getHeight() - self.player.mSprite.getHeight())
-                        # change to running left aiming up
-                        self.player.addSpriteComponent(self.aim_up_run_left)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_run_left)]
+                elif jumpAgain:
+                    if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
+                        self.changePlayerSprite(self.aim_up_falling_left)
                     else:
-                        # adjust yPos for diff in sprites
-                        self.playerTransform.yPos += (self.player.mSprite.getHeight() - self.aim_up_run_left.getHeight())
-                        # change to running left
                         if self.isShooting():
-                            self.player.addSpriteComponent(self.shooting_run_left)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.shooting_run_left)]
+                            self.changePlayerSprite(self.shooting_falling_left)
                         else:
-                            self.player.addSpriteComponent(self.run_left_sprite)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.run_left_sprite)]
+                            self.changePlayerSprite(self.falling_left)
+                else:
+                    if inputs[engine.UP_PRESSED]or inputs[engine.W_PRESSED]:
+                        self.changePlayerSprite(self.aim_up_run_left)
+                    else:
+                        if self.isShooting():
+                            self.changePlayerSprite(self.shooting_run_left)
+                        else:
+                            self.changePlayerSprite(self.run_left_sprite)
                             self.waitOneFrameForShot = True
             elif self.playerState.getState() == "ducking":
                 self.waitOneFrameForShot = True
-                self.playerTransform.yPos += self.diffBetweenStandingAndDucking
                 self.curXDirection = -1
                 self.player.xVel = - self.playerRunSpeed
                 self.player.yVel = self.playerFallingSpeed * self.curYDirection
-                # change to ducking left
-                self.player.addSpriteComponent(self.duck_left)
-                self.currentMaxFrame = self.maxFrameDict[str(self.duck_left)]
+                self.changePlayerSprite(self.duck_left)
             elif self.playerState.getState() == "rolling":
                 self.waitOneFrameForShot = True
                 if self.isFirstRollingFrame:
@@ -2277,18 +2594,13 @@ class Game:
                 self.curXDirection = -1
                 self.player.xVel = - self.playerRunSpeed
                 self.player.yVel = self.playerFallingSpeed * self.curYDirection
-                # change to rolling left
-                self.player.addSpriteComponent(self.roll_left)
-                self.currentMaxFrame = self.maxFrameDict[str(self.roll_left)]
+                self.changePlayerSprite(self.roll_left)
             elif self.playerState.getState() == "abouttostand":
                 self.waitOneFrameForShot = True
-                self.playerTransform.yPos -= self.diffBetweenDuckingAndRolling
                 self.curXDirection = -1
                 self.player.xVel = - self.playerRunSpeed
                 self.player.yVel = self.playerFallingSpeed * self.curYDirection
-                # change to ducking left
-                self.player.addSpriteComponent(self.duck_left)
-                self.currentMaxFrame = self.maxFrameDict[str(self.duck_left)]
+                self.changePlayerSprite(self.duck_left)
             elif self.playerState.getState() == "jumping" or self.playerState.getState() == "aimupjumping":
                 self.curXDirection = -1
                 self.player.xVel = - self.playerRunSpeed
@@ -2299,16 +2611,13 @@ class Game:
                 if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
                     # change to aim_up_falling_left
                     self.playerState.setState("aimupfalling")
-                    self.player.addSpriteComponent(self.aim_up_falling_left)
-                    self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_left)]
+                    self.changePlayerSprite(self.aim_up_falling_left)
                 else:
                     # change to falling left
                     if self.isShooting():
-                        self.player.addSpriteComponent(self.shooting_falling_left)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_left)]
+                        self.changePlayerSprite(self.shooting_falling_left)
                     else:
-                        self.player.addSpriteComponent(self.falling_left)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.falling_left)]
+                        self.changePlayerSprite(self.falling_left)
                         self.waitOneFrameForShot = True
             elif self.playerState.getState() == "aimupfalling":
                 self.curXDirection = -1
@@ -2316,64 +2625,54 @@ class Game:
                 self.player.yVel = self.playerFallingSpeed * self.curYDirection
                 if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
                     # change to aim up falling left
-                    self.player.addSpriteComponent(self.aim_up_falling_left)
-                    self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_left)]
+                    self.changePlayerSprite(self.aim_up_falling_left)
                 else:
                     # change to falling left
                     self.playerState.setState("falling")
                     if self.isShooting():
-                        self.player.addSpriteComponent(self.shooting_falling_left)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_left)]
+                        self.changePlayerSprite(self.shooting_falling_left)
                     else:
-                        self.player.addSpriteComponent(self.falling_left)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.falling_left)]
+                        self.changePlayerSprite(self.falling_left)
                         self.waitOneFrameForShot = True
 
         elif (inputs[engine.RIGHT_PRESSED] or inputs[engine.D_PRESSED]) and not (inputs[engine.LEFT_PRESSED] or inputs[engine.A_PRESSED]):
-            self.lastFrameWasIdle = False
             if self.playerState.getState() == "standing":
                 self.curXDirection = 1
                 self.player.xVel = self.playerRunSpeed
                 self.player.yVel = self.playerFallingSpeed * self.curYDirection
                 if self.isFirstStandingFrame:
-                    self.playerTransform.yPos -= self.diffBetweenStandingAndDucking
                     self.isFirstStandingFrame = False
                     # change to running right
                     if self.isShooting():
-                        self.player.addSpriteComponent(self.shooting_run_right)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.shooting_run_right)]
+                        self.changePlayerSprite(self.shooting_run_right)
                     else:
-                        self.player.addSpriteComponent(self.run_right_sprite)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.run_right_sprite)]
+                        self.changePlayerSprite(self.run_right_sprite)
                         self.waitOneFrameForShot = True
+                elif jumpAgain:
+                    if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
+                        self.changePlayerSprite(self.aim_up_falling_right)
+                    else:
+                        if self.isShooting():
+                            self.changePlayerSprite(self.shooting_falling_right)
+                        else:
+                            self.changePlayerSprite(self.falling_right)
                 else:
-                    if inputs[engine.UP_PRESSED] or inputs[engine.UP_TAPPED] or inputs[engine.W_PRESSED] or inputs[engine.W_TAPPED]:
-                        # adjust yPos for diff in sprites
-                        self.playerTransform.yPos -= (self.aim_up_run_right.getHeight() - self.player.mSprite.getHeight())
-                        # change to running right aiming up
-                        self.player.addSpriteComponent(self.aim_up_run_right)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_run_right)]
+                    if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
+                        self.changePlayerSprite(self.aim_up_run_right)
                     else:
                         # change to running right
                         if self.isShooting():
-                            # adjust yPos for diff in sprites
-                            self.playerTransform.yPos += (self.player.mSprite.getHeight() - self.shooting_run_right.getHeight())
-                            self.player.addSpriteComponent(self.shooting_run_right)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.shooting_run_right)]
+                            self.changePlayerSprite(self.shooting_run_right)
                         else:
-                            self.playerTransform.yPos += (self.player.mSprite.getHeight() - self.run_right_sprite.getHeight())
-                            self.player.addSpriteComponent(self.run_right_sprite)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.run_right_sprite)]
+                            self.changePlayerSprite(self.run_right_sprite)
                             self.waitOneFrameForShot = True
             elif self.playerState.getState() == "ducking":
                 self.waitOneFrameForShot = True
-                self.playerTransform.yPos += self.diffBetweenStandingAndDucking
+                # self.playerTransform.yPos += self.diffBetweenStandingAndDucking
                 self.curXDirection = 1
                 self.player.xVel = self.playerRunSpeed
                 self.player.yVel = self.playerFallingSpeed * self.curYDirection
-                # change to ducking right
-                self.player.addSpriteComponent(self.duck_right)
-                self.currentMaxFrame = self.maxFrameDict[str(self.duck_right)]
+                self.changePlayerSprite(self.duck_right)
             elif self.playerState.getState() == "rolling":
                 self.waitOneFrameForShot = True
                 if self.isFirstRollingFrame:
@@ -2382,18 +2681,13 @@ class Game:
                 self.curXDirection = 1
                 self.player.xVel = self.playerRunSpeed
                 self.player.yVel = self.playerFallingSpeed * self.curYDirection
-                # chenge to rolling right
-                self.player.addSpriteComponent(self.roll_right)
-                self.currentMaxFrame = self.maxFrameDict[str(self.roll_right)]
+                self.changePlayerSprite(self.roll_right)
             elif self.playerState.getState() == "abouttostand":
                 self.waitOneFrameForShot = True
-                self.playerTransform.yPos -= self.diffBetweenDuckingAndRolling
                 self.curXDirection = 1
                 self.player.xVel = self.playerRunSpeed
                 self.player.yVel = self.playerFallingSpeed * self.curYDirection
-                # change to ducking right
-                self.player.addSpriteComponent(self.duck_right)
-                self.currentMaxFrame = self.maxFrameDict[str(self.duck_right)]
+                self.changePlayerSprite(self.duck_right)
             elif self.playerState.getState() == "jumping" or self.playerState.getState() == "aimupjumping":
                 self.curXDirection = 1
                 self.player.xVel = self.playerRunSpeed
@@ -2404,100 +2698,79 @@ class Game:
                 if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
                     # change to aim_up_falling_right
                     self.playerState.setState("aimupfalling")
-                    self.player.addSpriteComponent(self.aim_up_falling_right)
-                    self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_right)]
+                    self.changePlayerSprite(self.aim_up_falling_right)
                 else:
                     # change to falling right
                     if self.isShooting():
-                        self.player.addSpriteComponent(self.shooting_falling_right)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_right)]
+                        self.changePlayerSprite(self.shooting_falling_right)
                     else:
-                        self.player.addSpriteComponent(self.falling_right)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.falling_right)]
+                        self.changePlayerSprite(self.falling_right)
                         self.waitOneFrameForShot = True
             elif self.playerState.getState() == "aimupfalling":
                 self.curXDirection = 1
                 self.player.xVel = self.playerRunSpeed
                 self.player.yVel = self.playerFallingSpeed * self.curYDirection
                 if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
-                    # change to aim up falling right
-                    self.player.addSpriteComponent(self.aim_up_falling_right)
-                    self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_right)]
+                    self.changePlayerSprite(self.aim_up_falling_right)
                 else:
                     # change to falling right
                     self.playerState.setState("falling")
                     if self.isShooting():
-                        self.player.addSpriteComponent(self.shooting_falling_right)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_right)]
+                        self.changePlayerSprite(self.shooting_falling_right)
                     else:
-                        self.player.addSpriteComponent(self.falling_right)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.falling_right)]
+                        self.changePlayerSprite(self.falling_right)
                         self.waitOneFrameForShot = True
 
         else:
             # player does not move along x-axis
             if self.playerState.getState() == "standing":
-                # set x velocity to 0
                 self.player.xVel = 0
-
                 if self.curXDirection > 0:
-                    if inputs[engine.UP_PRESSED] or inputs[engine.UP_TAPPED] or inputs[engine.W_PRESSED] or inputs[engine.W_TAPPED]:
+                    if inputs[engine.UP_PRESSED]or inputs[engine.W_PRESSED]:
                         # switch to aiming up
-                        if self.isFirstStandingFrame:
-                            self.playerTransform.yPos -= self.diffBetweenStandingAndDucking
+                        if jumpAgain:
+                            self.changePlayerSprite(self.aim_up_falling_right)
+                        elif self.isFirstStandingFrame:
                             self.isFirstStandingFrame = False
-                            self.lastFrameWasIdle = False
-                        elif self.lastFrameWasIdle:
-                            self.playerTransform.yPos -= (self.aim_up_idle_right.getHeight() - self.idle_right.getHeight())
-                            self.lastFrameWasIdle = False
-                        self.player.addSpriteComponent(self.aim_up_idle_right) # TODO: Here is where you have to put lastFrameWasIdle logic
-                        self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_idle_right)]
+                            self.changePlayerSprite(self.aim_up_idle_right)
+                        else:
+                            self.changePlayerSprite(self.aim_up_idle_right)
                     else:
                         # switch to idle_right
-                        if self.isFirstStandingFrame:
-                            self.playerTransform.yPos -= self.diffBetweenStandingAndDucking
+                        if jumpAgain:
+                            self.changePlayerSprite(self.falling_right)
+                        elif self.isFirstStandingFrame:
                             self.isFirstStandingFrame = False
-                            # self.lastFrameWasIdle = False
-                        elif not self.lastFrameWasIdle:
-                            self.playerTransform.yPos += self.player.mSprite.getHeight() - self.idle_right.getHeight()
-                        self.player.addSpriteComponent(self.idle_right)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.idle_right)]
-                        self.lastFrameWasIdle = True
+                            self.changePlayerSprite(self.idle_right)
+                        else:
+                            self.changePlayerSprite(self.idle_right)
+
                 else:
-                    if inputs[engine.UP_PRESSED] or inputs[engine.UP_TAPPED] or inputs[engine.W_PRESSED] or inputs[engine.W_TAPPED]:
+                    if inputs[engine.UP_PRESSED]or inputs[engine.W_PRESSED]:
                         # switch to aiming up
-                        if self.isFirstStandingFrame:
-                            self.playerTransform.yPos -= self.diffBetweenStandingAndDucking
+                        if jumpAgain:
+                            self.changePlayerSprite(self.aim_up_falling_left)
+                        elif self.isFirstStandingFrame:
                             self.isFirstStandingFrame = False
-                            self.lastFrameWasIdle = False
-                        elif self.lastFrameWasIdle:
-                            self.playerTransform.yPos -= (self.aim_up_idle_left.getHeight() - self.idle_left.getHeight())
-                            self.lastFrameWasIdle = False
-                        self.player.addSpriteComponent(self.aim_up_idle_left)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_idle_left)]
+                            self.changePlayerSprite(self.aim_up_idle_left)
+                        else:
+                            self.changePlayerSprite(self.aim_up_idle_left)
                     else:
                         # switch to idle_left
-                        if self.isFirstStandingFrame:
-                            self.playerTransform.yPos -= self.diffBetweenStandingAndDucking
+                        if jumpAgain:
+                            self.changePlayerSprite(self.falling_left)
+                        elif self.isFirstStandingFrame:
                             self.isFirstStandingFrame = False
-                            # self.lastFrameWasIdle = False
-                        elif not self.lastFrameWasIdle:
-                            self.playerTransform.yPos += self.player.mSprite.getHeight() - self.idle_left.getHeight()
-                        self.player.addSpriteComponent(self.idle_left)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.idle_left)]
-                        self.lastFrameWasIdle = True
+                            self.changePlayerSprite(self.idle_left)
+                        else:
+                            self.changePlayerSprite(self.idle_left)
             elif self.playerState.getState() == "ducking":
                 self.waitOneFrameForShot = True
-                self.playerTransform.yPos += self.diffBetweenStandingAndDucking
                 self.player.xVel = 0
                 if self.curXDirection > 0:
-                    # switch to duck_right
-                    self.player.addSpriteComponent(self.duck_right)
-                    self.currentMaxFrame = self.maxFrameDict[str(self.duck_right)]
+                    self.changePlayerSprite(self.duck_right)
                 else:
-                    # switch to duck_left
-                    self.player.addSpriteComponent(self.duck_left)
-                    self.currentMaxFrame = self.maxFrameDict[str(self.duck_left)]
+                    self.changePlayerSprite(self.duck_left)
             elif self.playerState.getState() == "rolling":
                 self.waitOneFrameForShot = True
                 if self.isFirstRollingFrame:
@@ -2505,91 +2778,63 @@ class Game:
                     self.isFirstRollingFrame = False
                 self.player.xVel = 0
                 if self.curXDirection > 0:
-                    # switch to rolling right
-                    self.player.addSpriteComponent(self.roll_right)
-                    self.currentMaxFrame = self.maxFrameDict[str(self.roll_right)]
+                    self.changePlayerSprite(self.roll_right)
                 else:
-                    # switch to rolling left
-                    self.player.addSpriteComponent(self.roll_left)
-                    self.currentMaxFrame = self.maxFrameDict[str(self.roll_left)]
+                    self.changePlayerSprite(self.roll_left)
             elif self.playerState.getState() == "abouttostand":
                 self.waitOneFrameForShot = True
-                self.playerTransform.yPos -= self.diffBetweenDuckingAndRolling
                 self.player.xVel = 0
                 if self.curXDirection > 0:
-                    # switch to duck_right
-                    self.player.addSpriteComponent(self.duck_right)
-                    self.currentMaxFrame = self.maxFrameDict[str(self.duck_right)]
+                    self.changePlayerSprite(self.duck_right)
                 else:
-                    # switch to duck_left
-                    self.player.addSpriteComponent(self.duck_left)
-                    self.currentMaxFrame = self.maxFrameDict[str(self.duck_left)]
+                    self.changePlayerSprite(self.duck_left)
             elif self.playerState.getState() == "jumping" or self.playerState.getState() == "aimupjumping":
-                self.lastFrameWasIdle = False
                 self.player.xVel = 0
             elif self.playerState.getState() == "falling":
-                # set x velocity to 0
                 self.player.xVel = 0
                 self.player.yVel = self.playerFallingSpeed * self.curYDirection
                 if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
                     if self.curXDirection > 0:
-                        # switch to aim up fall right
-                        self.player.addSpriteComponent(self.aim_up_falling_right)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_right)]
+                        self.changePlayerSprite(self.aim_up_falling_right)
                     else:
-                        # switch to aim up fall left
-                        self.player.addSpriteComponent(self.aim_up_falling_left)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_left)]
+                        self.changePlayerSprite(self.aim_up_falling_left)
                 else:
                     if self.curXDirection > 0:
                         # switch to fall right
                         if self.isShooting():
-                            self.player.addSpriteComponent(self.shooting_falling_right)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_right)]
+                            self.changePlayerSprite(self.shooting_falling_right)
                         else:
-                            self.player.addSpriteComponent(self.falling_right)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.falling_right)]
+                            self.changePlayerSprite(self.falling_right)
                             self.waitOneFrameForShot = True
                     else:
                         # switch to fall left
                         if self.isShooting():
-                            self.player.addSpriteComponent(self.shooting_falling_left)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_left)]
+                            self.changePlayerSprite(self.shooting_falling_left)
                         else:
-                            self.player.addSpriteComponent(self.falling_left)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.falling_left)]
+                            self.changePlayerSprite(self.falling_left)
                             self.waitOneFrameForShot = True
             elif self.playerState.getState() == "aimupfalling":
-                # set x velocity to 0
                 self.player.xVel = 0
                 self.player.yVel = self.playerFallingSpeed * self.curYDirection
                 if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
                     if self.curXDirection > 0:
-                        # switch to aim up fall right
-                        self.player.addSpriteComponent(self.aim_up_falling_right)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_right)]
+                        self.changePlayerSprite(self.aim_up_falling_right)
                     else:
-                        # switch to aim up fall left
-                        self.player.addSpriteComponent(self.aim_up_falling_left)
-                        self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_left)]
+                        self.changePlayerSprite(self.aim_up_falling_left)
                 else:
                     if self.curXDirection > 0:
                         # switch to fall right
                         if self.isShooting():
-                            self.player.addSpriteComponent(self.shooting_falling_right)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_right)]
+                            self.changePlayerSprite(self.shooting_falling_right)
                         else:
-                            self.player.addSpriteComponent(self.falling_right)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.falling_right)]
+                            self.changePlayerSprite(self.falling_right)
                             self.waitOneFrameForShot = True
                     else:
                         # switch to fall left
                         if self.isShooting():
-                            self.player.addSpriteComponent(self.shooting_falling_left)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_left)]
+                            self.changePlayerSprite(self.shooting_falling_left)
                         else:
-                            self.player.addSpriteComponent(self.falling_left)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.falling_left)]
+                            self.changePlayerSprite(self.falling_left)
                             self.waitOneFrameForShot = True
 
     def animateRoomChangeToTheRight(self, curTilemap, nextTilemap):
@@ -2715,7 +2960,7 @@ class Game:
             self.player.mTransform.yPos = leftLvlHeight - (rightLvlHeight - self.player.mTransform.yPos)
         elif self.sideOrVertDict[str(nextTilemap)] == "vertical":
             self.rightCamera.y = self.camera.y
-            self.leftCamera.y = leftLvlHeight - self.windowHeight
+            self.leftCamera.y = self.camera.y
 
         self.rightCamera.x = self.camera.x
         self.leftCamera.x = leftLvlWidth
@@ -2799,14 +3044,14 @@ class Game:
         if str(leftTilemap) in self.enemiesDict:
             if "bugArray" in self.enemiesDict[str(leftTilemap)]:
                 for bug in self.enemiesDict[str(leftTilemap)]["bugArray"]:
-                    self.handleBugUpdate(bug, leftTilemap)
+                    self.handleBugUpdate(bug, leftTilemap, True)
             if "zoomerArray" in self.enemiesDict[str(leftTilemap)]:
                 for zoomer in self.enemiesDict[str(leftTilemap)]["zoomerArray"]:
                     self.handleZoomerUpdate(zoomer, leftTilemap)
         if str(rightTilemap) in self.enemiesDict:
             if "bugArray" in self.enemiesDict[str(rightTilemap)]:
                 for bug in self.enemiesDict[str(rightTilemap)]["bugArray"]:
-                    self.handleBugUpdate(bug, rightTilemap)
+                    self.handleBugUpdate(bug, rightTilemap, True)
             if "zoomerArray" in self.enemiesDict[str(rightTilemap)]:
                 for zoomer in self.enemiesDict[str(rightTilemap)]["zoomerArray"]:
                     self.handleZoomerUpdate(zoomer, rightTilemap)
@@ -2840,7 +3085,7 @@ class Game:
             if "zoomerArray" in self.enemiesDict[str(leftTilemap)]:
                 for zoomer in self.enemiesDict[str(leftTilemap)]["zoomerArray"]:
                     if zoomer.isActive():
-                        zoomer.getZoomerObject().mSprite.render(self.sdle.getSDLRenderer(), leftCamera.x, leftCamera.y)
+                        zoomer.getZoomerObject().mSprite.render(self.sdl.getSDLRenderer(), leftCamera.x, leftCamera.y)
         if str(rightTilemap) in self.enemiesDict:
             if "bugArray" in self.enemiesDict[str(rightTilemap)]:
                 for bug in self.enemiesDict[str(rightTilemap)]["bugArray"]:
@@ -3022,49 +3267,39 @@ class Game:
                 if self.uprightJump:
                     if self.curXDirection > 0:
                         if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
-                            self.player.addSpriteComponent(self.aim_up_falling_right)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_right)]
+                            self.changePlayerSprite(self.aim_up_falling_right)
                         else:
                             if self.isShooting():
                                 # fix multiple jumps
                                 self.player.mTransform.xPos -= abs(self.player.mSprite.getWidth() - self.shooting_falling_right.getWidth())
-                                self.player.addSpriteComponent(self.shooting_falling_right)
-                                self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_right)]
+                                self.changePlayerSprite(self.shooting_falling_right)
                             else:
-                                self.player.addSpriteComponent(self.falling_right)
-                                self.currentMaxFrame = self.maxFrameDict[str(self.falling_right)]
+                                self.changePlayerSprite(self.falling_right)
                                 self.waitOneFrameForShot = True
                     else:
                         # go left
                         if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
-                            self.player.addSpriteComponent(self.aim_up_falling_left)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_left)]
+                            self.changePlayerSprite(self.aim_up_falling_left)
                         else:
                             if self.isShooting():
-                                self.player.addSpriteComponent(self.shooting_falling_left)
-                                self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_left)]
+                                self.changePlayerSprite(self.shooting_falling_left)
                             else:
-                                self.player.addSpriteComponent(self.falling_left)
-                                self.currentMaxFrame = self.maxFrameDict[str(self.falling_left)]
+                                self.changePlayerSprite(self.falling_left)
                                 self.waitOneFrameForShot = True
                 else:
                     if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
                         # change to uprightJump
                         self.uprightJump = True
                         if self.curXDirection > 0:
-                            self.player.addSpriteComponent(self.aim_up_falling_right)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_right)]
+                            self.changePlayerSprite(self.aim_up_falling_right)
                         else:
-                            self.player.addSpriteComponent(self.aim_up_falling_left)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_left)]
+                            self.changePlayerSprite(self.aim_up_falling_left)
                     elif self.isShooting():
                         self.uprightJump = True
                         if self.curXDirection > 0:
-                            self.player.addSpriteComponent(self.shooting_falling_right)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_right)]
+                            self.changePlayerSprite(self.shooting_falling_right)
                         else:
-                            self.player.addSpriteComponent(self.shooting_falling_left)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_left)]
+                            self.changePlayerSprite(self.shooting_falling_left)
                             self.waitOneFrameForShot = True
 
             else:
@@ -3084,16 +3319,20 @@ class Game:
                     self.playerState.setState("jumping")
                     self.shootingCounter = self.shootingCounterMax + 1
                     self.waitOneFrameForShot = True
-                    self.player.addSpriteComponent(self.somersault_right)
-                    self.currentMaxFrame = self.maxFrameDict[str(self.somersault_right)]
+                    if self.hasScrewAttack:
+                        self.changePlayerSprite(self.screw_attack_right)
+                    else:
+                        self.changePlayerSprite(self.somersault_right)
                     self.currentFrame = 0
                 elif (inputs[engine.LEFT_PRESSED] or inputs[engine.A_PRESSED]) and not (inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]):
                     self.uprightJump = False
                     self.playerState.setState("jumping")
                     self.shootingCounter = self.shootingCounterMax + 1
                     self.waitOneFrameForShot = True
-                    self.player.addSpriteComponent(self.somersault_left)
-                    self.currentMaxFrame = self.maxFrameDict[str(self.somersault_left)]
+                    if self.hasScrewAttack:
+                        self.changePlayerSprite(self.screw_attack_left)
+                    else:
+                        self.changePlayerSprite(self.somersault_left)
                     self.currentFrame = 0
                 else:
                     self.uprightJump = True
@@ -3101,8 +3340,7 @@ class Game:
                         if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
                             self.playerState.setState("aimupjumping")
                             currentWidth = self.player.mSprite.getWidth()
-                            self.player.addSpriteComponent(self.aim_up_falling_right)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_right)]
+                            self.changePlayerSprite(self.aim_up_falling_right)
                             collision = self.tilemap.isTouchingRightWall(self.player)
                             if collision.isColliding:
                                 self.playerTransform.xPos -= (self.aim_up_falling_right.getWidth() - currentWidth)
@@ -3110,14 +3348,12 @@ class Game:
                             self.playerState.setState("jumping")
                             currentWidth = self.player.mSprite.getWidth()
                             if self.isShooting():
-                                self.player.addSpriteComponent(self.shooting_falling_right)
-                                self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_right)]
+                                self.changePlayerSprite(self.shooting_falling_right)
                                 collision = self.tilemap.isTouchingRightWall(self.player)
                                 if collision.isColliding:
                                     self.playerTransform.xPos -= (self.shooting_falling_right.getWidth() - currentWidth)
                             else:
-                                self.player.addSpriteComponent(self.falling_right)
-                                self.currentMaxFrame = self.maxFrameDict[str(self.falling_right)]
+                                self.changePlayerSprite(self.falling_right)
                                 self.waitOneFrameForShot = True
                                 collision = self.tilemap.isTouchingRightWall(self.player)
                                 if collision.isColliding:
@@ -3126,29 +3362,26 @@ class Game:
                     else:
                         if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
                             self.playerState.setState("aimupjumping")
-                            self.player.addSpriteComponent(self.aim_up_falling_left)
-                            self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_left)]
+                            self.changePlayerSprite(self.aim_up_falling_left)
                         else:
                             self.playerState.setState("jumping")
                             if self.isShooting():
-                                self.player.addSpriteComponent(self.shooting_falling_left)
-                                self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_left)]
+                                self.changePlayerSprite(self.shooting_falling_left)
                             else:
-                                self.player.addSpriteComponent(self.falling_left)
-                                self.currentMaxFrame = self.maxFrameDict[str(self.falling_left)]
+                                self.changePlayerSprite(self.falling_left)
                                 self.waitOneFrameForShot = True
 
     # Handles duck and roll and standing back up: sprites are assigned in handlePlayerMove()
     def handleDuckAndRoll(self, inputs, collision):
         if self.playerState.getState() == "standing":
-            if collision.isColliding and (inputs[engine.DOWN_TAPPED] or inputs[engine.S_TAPPED] or inputs[engine.DOWN_PRESSED] or inputs[engine.S_PRESSED]):
+            if collision.isColliding and (inputs[engine.DOWN_PRESSED] or inputs[engine.S_PRESSED]):
                 # begin duck
                 self.playerState.setState("ducking")
         elif self.playerState.getState() == "ducking":
             self.playerState.setState("rolling")
             self.isFirstRollingFrame = True
         elif self.playerState.getState() == "rolling":
-            if inputs[engine.UP_TAPPED] or inputs[engine.W_TAPPED] or inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
+            if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
                 # check if rolling under an obstacle
                 if self.tilemap.tileAtXY(self.playerTransform.xPos, self.playerTransform.yPos - self.player.mSprite.getHeight()) == -1 and \
                     self.tilemap.tileAtXY(self.playerTransform.xPos + self.player.mSprite.getWidth(), self.playerTransform.yPos - self.player.mSprite.getHeight()) == -1:
@@ -3157,6 +3390,20 @@ class Game:
             self.playerState.setState("standing")
             self.isFirstStandingFrame = True
         
+    def handlePlayerBombing(self, inputs):
+        if len(self.bombArr) > 0:
+            self.countDownBetweenBombs -= 1
+        # must be rolling, fire pressed, countDownBetweenBombs <= 0, numBombs <= 3
+        if self.playerState.getState() == "rolling":
+            if inputs[engine.H_PRESSED] or inputs[engine.K_PRESSED]:
+                if len(self.bombArr) < 3:
+                    if self.countDownBetweenBombs <= 0:
+                        bomb = Bomb(self.tilemap, self.sdl)
+                        xPos = int(self.player.mTransform.xPos + self.player.mSprite.getWidth()/2 - bomb.getBombWidth()/2)
+                        yPos = int(self.player.mTransform.yPos + self.player.mSprite.getHeight() - bomb.getBombHeight())
+                        bomb.setBombPosition(xPos, yPos)
+                        self.bombArr.append(bomb)
+                        self.countDownBetweenBombs = self.numFramesBetweenBombs
 
     # Handles player touching wall
     def handlePlayerWallCollision(self):
@@ -3168,12 +3415,10 @@ class Game:
                 collision = self.tilemap.isTouchingRightWall(self.player)
                 if collision.isColliding:
                     # hit right wall: set xPos to correct x according to row, col
-                    print("Player hit right wall")
                     self.player.mTransform.xPos = self.tileSize * collision.firstTileColumn - self.player.mSprite.getWidth() - 1 # minus one is necessary to stay off right wall
                 collision = self.tilemap.isTouchingLeftWall(self.player)
                 if collision.isColliding:
                     # hit left wall
-                    print("Player hit left wall")
                     self.player.mTransform.xPos = self.tileSize * (collision.firstTileColumn + 1)
         
             
@@ -3183,6 +3428,10 @@ class Game:
         currentState = self.playerState.getState()
         if self.waitOneCycleForJumpUpdate:
             self.waitOneCycleForJumpUpdate = False
+            # This yPos change is necessary so that we don't get a left and right wall collision
+            collision = self.tilemap.isOnGround(self.player)
+            if collision.isColliding:
+                self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.player.mSprite.getHeight() - 1
         elif self.player.yVel > 0:
             collision = self.tilemap.isOnGround(self.player)
             if collision.isColliding:
@@ -3203,35 +3452,116 @@ class Game:
     
     def changeToStanding(self, collision, inputs):
         self.playerState.setState("standing")
+        # if up is pressed, keep sprite as aim-up-jumping but still change playerState to "standing"
+        jumpAgain = False
+        aimUp = False
+        if inputs[engine.J_PRESSED]:
+            jumpAgain = True
+        if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
+            aimUp = True
         if inputs[engine.RIGHT_PRESSED] or inputs[engine.D_PRESSED]:
             if self.isShooting():
-                self.player.addSpriteComponent(self.shooting_run_right)
-                self.currentMaxFrame = self.maxFrameDict[str(self.shooting_run_right)]
-                self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.shooting_run_right.getHeight() - 1
+                if jumpAgain:
+                    if aimUp:
+                        self.player.addSpriteComponent(self.aim_up_falling_right)
+                        self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_right)]
+                        self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.aim_up_falling_right.getHeight() - 1
+                    else:
+                        self.player.addSpriteComponent(self.shooting_falling_right)
+                        self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_right)]
+                        self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.shooting_falling_right.getHeight() - 1
+                else:
+                    self.player.addSpriteComponent(self.shooting_run_right)
+                    self.currentMaxFrame = self.maxFrameDict[str(self.shooting_run_right)]
+                    self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.shooting_run_right.getHeight() - 1
             else:
-                self.player.addSpriteComponent(self.run_right_sprite)
-                self.currentMaxFrame = self.maxFrameDict[str(self.run_right_sprite)]
-                self.waitOneFrameForShot = True
-                self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.run_right_sprite.getHeight() - 1
+                if jumpAgain:
+                    if aimUp:
+                        self.player.addSpriteComponent(self.aim_up_falling_right)
+                        self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_right)]
+                        self.waitOneFrameForShot = True
+                        self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.aim_up_falling_right.getHeight() - 1
+                    else:
+                        self.player.addSpriteComponent(self.falling_right)
+                        self.currentMaxFrame = self.maxFrameDict[str(self.falling_right)]
+                        self.waitOneFrameForShot = True
+                        self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.falling_right.getHeight() - 1
+                else:
+                    self.player.addSpriteComponent(self.run_right_sprite)
+                    self.currentMaxFrame = self.maxFrameDict[str(self.run_right_sprite)]
+                    self.waitOneFrameForShot = True
+                    self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.run_right_sprite.getHeight() - 1
         elif inputs[engine.LEFT_PRESSED] or inputs[engine.A_PRESSED]:
             if self.isShooting():
-                self.player.addSpriteComponent(self.shooting_run_left)
-                self.currentMaxFrame = self.maxFrameDict[str(self.shooting_run_left)]
-                self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.shooting_run_left.getHeight() - 1
+                if jumpAgain:
+                    if aimUp:
+                        self.player.addSpriteComponent(self.aim_up_falling_left)
+                        self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_left)]
+                        self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.aim_up_falling_left.getHeight() - 1
+                    else:
+                        self.player.addSpriteComponent(self.shooting_falling_left)
+                        self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_left)]
+                        self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.shooting_falling_left.getHeight() - 1
+                else:
+                    self.player.addSpriteComponent(self.shooting_run_left)
+                    self.currentMaxFrame = self.maxFrameDict[str(self.shooting_run_left)]
+                    self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.shooting_run_left.getHeight() - 1
             else:
-                self.player.addSpriteComponent(self.run_left_sprite)
-                self.currentMaxFrame = self.maxFrameDict[str(self.run_left_sprite)]
-                self.waitOneFrameForShot = True
-                self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.run_left_sprite.getHeight() - 1
+                if jumpAgain:
+                    if aimUp:
+                        self.player.addSpriteComponent(self.aim_up_falling_left)
+                        self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_left)]
+                        self.waitOneFrameForShot = True
+                        self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.aim_up_falling_left.getHeight() - 1
+                    else:
+                        self.player.addSpriteComponent(self.falling_left)
+                        self.currentMaxFrame = self.maxFrameDict[str(self.falling_left)]
+                        self.waitOneFrameForShot = True
+                        self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.falling_left.getHeight() - 1
+                else:
+                    self.player.addSpriteComponent(self.run_left_sprite)
+                    self.currentMaxFrame = self.maxFrameDict[str(self.run_left_sprite)]
+                    self.waitOneFrameForShot = True
+                    self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.run_left_sprite.getHeight() - 1
         else:
             if self.curXDirection > 0:
-                self.player.addSpriteComponent(self.idle_right)
-                self.currentMaxFrame = self.maxFrameDict[str(self.idle_right)]
-                self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.idle_right.getHeight() - 1
+                if jumpAgain:
+                    if aimUp:
+                        self.player.addSpriteComponent(self.aim_up_falling_right)
+                        self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_right)]
+                        self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.aim_up_falling_right.getHeight() - 1
+                    else:
+                        if self.isShooting():
+                            self.player.addSpriteComponent(self.shooting_falling_right)
+                            self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_right)]
+                            self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.shooting_falling_right.getHeight() - 1
+                        else:
+                            self.player.addSpriteComponent(self.falling_right)
+                            self.currentMaxFrame = self.maxFrameDict[str(self.falling_right)]
+                            self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.falling_right.getHeight() - 1
+                else:
+                    self.player.addSpriteComponent(self.idle_right)
+                    self.currentMaxFrame = self.maxFrameDict[str(self.idle_right)]
+                    self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.idle_right.getHeight() - 1
             else:
-                self.player.addSpriteComponent(self.idle_left)
-                self.currentMaxFrame = self.maxFrameDict[str(self.idle_left)]
-                self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.idle_left.getHeight() - 1
+                if jumpAgain:
+                    if aimUp:
+                        self.player.addSpriteComponent(self.aim_up_falling_left)
+                        self.currentMaxFrame = self.maxFrameDict[str(self.aim_up_falling_left)]
+                        self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.aim_up_falling_left.getHeight() - 1
+                    else:
+                        if self.isShooting():
+                            self.player.addSpriteComponent(self.shooting_falling_left)
+                            self.currentMaxFrame = self.maxFrameDict[str(self.shooting_falling_left)]
+                            self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.shooting_falling_left.getHeight() - 1
+                        else:
+                            self.player.addSpriteComponent(self.falling_left)
+                            self.currentMaxFrame = self.maxFrameDict[str(self.falling_left)]
+                            self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.falling_left.getHeight() - 1
+                else:
+                    self.player.addSpriteComponent(self.idle_left)
+                    self.currentMaxFrame = self.maxFrameDict[str(self.idle_left)]
+                    self.player.mTransform.yPos = self.tileSize * (collision.firstTileRow) - self.idle_left.getHeight() - 1
 
 
     def handlePlayerCeilingCollision(self, inputs):
@@ -3246,15 +3576,12 @@ class Game:
                 self.uprightJump = False
                 self.changeToFalling(inputs)
 
-    
     def handleDoorCollisionX(self):
         if str(self.tilemap) in self.bubbleDoorDict:
             for bubbleDoor in self.bubbleDoorDict[str(self.tilemap)]:
                 isColliding = bubbleDoor.checkIfColliding(self.player)
                 if isColliding == True:
                     self.player.mTransform.xPos += bubbleDoor.getXDiff(self.player)
-                    # self.player.mTransform.xPos += xDiff
-                    return
     
     def handleDoorCollisionY(self, inputs):
         if str(self.tilemap) in self.bubbleDoorDict:
@@ -3326,29 +3653,65 @@ class Game:
                         if bug.isActive():
                             isColliding = bug.checkIfColliding(self.player)
                             if isColliding:
-                                self.player.mJumpComponent.EndJump()
-                                self.uprightJump = False
-                                self.playerIsHit = True
-                                if bug.getCurrentXDirection() > 0:
-                                    self.backupRight = True
+                                if self.player.mSprite == self.screw_attack_left or self.player.mSprite == self.screw_attack_right:
+                                    bug.decreaseHitPoints(100)
                                 else:
-                                    self.backupLeft = True
+                                    self.player.mJumpComponent.EndJump()
+                                    self.uprightJump = False
+                                    self.playerIsHit = True
+                                    if bug.getCurrentXDirection() > 0:
+                                        self.backupRight = True
+                                    else:
+                                        self.backupLeft = True
                 if "zoomerArray" in self.enemiesDict[str(self.tilemap)]:
                     for zoomer in self.enemiesDict[str(self.tilemap)]["zoomerArray"]:
                         if zoomer.isActive():
                             isColliding = zoomer.checkIfColliding(self.player)
                             if isColliding:
-                                self.player.mJumpComponent.EndJump()
-                                self.uprightJump = False
-                                self.playerIsHit = True
-                                if self.curXDirection > 0:
-                                    self.backupLeft = True
+                                if self.player.mSprite == self.screw_attack_left or self.player.mSprite == self.screw_attack_right:
+                                    zoomer.decreaseHitPoints(100)
                                 else:
-                                    self.backupRight = True
+                                    self.player.mJumpComponent.EndJump()
+                                    self.uprightJump = False
+                                    self.playerIsHit = True
+                                    if self.curXDirection > 0:
+                                        self.backupLeft = True
+                                    else:
+                                        self.backupRight = True
+
+    def handlePowerUpCollision(self):
+        def checkIfColliding(powerUpObj, playerObj):
+            x1 = powerUpObj.mTransform.xPos
+            y1 = powerUpObj.mTransform.yPos
+            width1 = powerUpObj.mSprite.getWidth()
+            height1 = powerUpObj.mSprite.getHeight()
+            x2 = playerObj.mTransform.xPos
+            y2 = playerObj.mTransform.yPos
+            width2 = playerObj.mSprite.getWidth()
+            height2 = playerObj.mSprite.getHeight()
+            if (x1 < x2 + width2 and x1 + width1 > x2 and
+                    y1 < y2 + height2 and y1 + height1 > y2):
+                return True
+            return False
+        if str(self.tilemap) in self.powerUpDict:
+            if self.powerUpActiveDict[str(self.tilemap)]:
+                if checkIfColliding(self.powerUpDict[str(self.tilemap)], self.player):
+                    self.hasScrewAttack = True
+                    self.powerUpActiveDict[str(self.tilemap)] = False
+
+    def handlePlayerExplodingTileCollisionX(self):
+        if str(self.tilemap) in self.explodableTilesDict:
+            for tile in self.explodableTilesDict[str(self.tilemap)]:
+                if tile.isActive():
+                    if tile.checkIfColliding(self.player):
+                        tileObject = tile.getTileObject()
+                        if self.curXDirection > 0:
+                            self.player.mTransform.xPos = tileObject.mTransform.xPos - self.player.mSprite.getWidth() - 1
+                        else:
+                            self.player.mTransform.xPos = tileObject.mTransform.xPos + tileObject.mSprite.getWidth() + 1
+
+
                     
-
-
-
     # Handles all player associated updates
     def playerUpdate(self, inputs):
         # Player left and right movement
@@ -3356,15 +3719,19 @@ class Game:
         # Physics update on player xPos
         self.physics.UpdateX(self.player)
         self.handleEnemyCollision(inputs)
+        self.handlePowerUpCollision()
         self.handlePlayerWallCollision()
         self.handleDoorCollisionX()
+        self.handlePlayerExplodingTileCollisionX()
         self.handlePlayerJump(inputs)
+
         # Physics update on player yPos
         self.physics.UpdateY(self.player)
         collisionFloor = self.handlePlayerFloorCollision(inputs)
         self.handleDoorCollisionY(inputs)
         self.handlePlayerCeilingCollision(inputs)
         self.handleDuckAndRoll(inputs, collisionFloor)
+        self.handlePlayerBombing(inputs)
         self.handlePlayerShooting(inputs)
         
         # update frame
@@ -3412,6 +3779,20 @@ class Game:
             del self.transformDict[key]
             del self.physicsDict[key]
 
+    def bombsUpdate(self):
+        numBombsToDestroy = 0
+        for bomb in self.bombArr:
+            bomb.incrementCurrentFrameCount()
+            bomb.decrementCountDown()
+            bomb.getBombObject().mSprite.update(0, 0, int(bomb.getCurrentFrameCount()))
+            if bomb.isTimeToDestroy():
+                numBombsToDestroy += 1
+        for i in range(numBombsToDestroy):
+            self.bombArr.pop(0)
+        if len(self.bombArr) == 0:
+            self.countDownBetweenBombs = 0
+
+
     def doorObjectsUpdate(self, tilemap):
         if str(tilemap) in self.doorObjectsDict.keys():
             for doorObject in self.doorObjectsDict[str(tilemap)]:
@@ -3428,14 +3809,35 @@ class Game:
         if str(tilemap) in self.enemiesDict:
             if "bugArray" in self.enemiesDict[str(tilemap)]:
                 for bug in self.enemiesDict[str(tilemap)]["bugArray"]:
-                    self.handleBugUpdate(bug, tilemap)
+                    self.handleBugUpdate(bug, tilemap, False)
             if "zoomerArray" in self.enemiesDict[str(tilemap)]:
                 for zoomer in self.enemiesDict[str(tilemap)]["zoomerArray"]:
                     self.handleZoomerUpdate(zoomer, tilemap)
+
+    def getPowerUpFrameCount(self, tilemap):
+        res = 0
+        if str(tilemap) in self.powerUpFrameCountDict:
+            self.powerUpFrameCountDict[str(tilemap)] += 1
+            if self.powerUpFrameCountDict[str(tilemap)] > 1:
+                self.powerUpFrameCountDict[str(tilemap)] = 0
+            res = self.powerUpFrameCountDict[str(tilemap)]
+        return res
+
+    def powerUpUpdate(self, tilemap):
+        if str(tilemap) in self.powerUpDict and str(tilemap) in self.powerUpActiveDict:
+            if self.powerUpActiveDict[str(tilemap)]:
+                self.powerUpDict[str(tilemap)].mSprite.update(0, 0, self.getPowerUpFrameCount(tilemap))
+
     
-    def handleBugUpdate(self, bug, tilemap):
+    def handleBugUpdate(self, bug, tilemap, isAnimating):
         if bug.isActive():
             bugObject = bug.getBugObject()
+            # check if off screen
+            if (self.player.mTransform.xPos >= bug.originalXPos + self.windowWidth or self.player.mTransform.xPos <= bug.originalXPos - self.windowWidth)\
+                and (self.player.mTransform.xPos >= bugObject.mTransform.xPos + self.windowWidth\
+                or self.player.mTransform.xPos <= bugObject.mTransform.xPos - self.windowWidth) and not isAnimating:
+                bug.setActiveStatus(True)
+                return
             # update sprite
             bugObject.mSprite.update(0, 0, int(bug.getCurrentFrameCount()))
             bugObject.mJumpComponent.Update(bugObject)
@@ -3497,6 +3899,11 @@ class Game:
                 zoomerObject.mTransform.xPos = (tilemap.getCols() + 1) * self.tileSize - zoomerObject.mSprite.getWidth() - 1
                 zoomerObject.xVel = zoomer.getCurrentXVelocity()
             self.updateZoomer(zoomer, tilemap, curOrientation, zoomer.isGoingClockwise())
+        else:
+            # only need to check yPos, for now
+            if zoomer.getOriginalYPos() > self.player.mTransform.yPos + self.windowHeight or \
+                zoomer.getOriginalYPos() < self.player.mTransform.yPos - self.windowHeight:
+                zoomer.setActiveStatus(True)
 
     def updateZoomer(self, zoomer, tilemap, curOrientation, isClockwise):
         zoomerObject = zoomer.getZoomerObject()
@@ -3760,6 +4167,42 @@ class Game:
             del self.transformDict[key]
             del self.physicsDict[key]
 
+    def bombEnemiesCollisionUpdate(self):
+        for bomb in self.bombArr:
+            bombObject = bomb.getBombObject()
+            if str(self.tilemap) in self.enemiesDict:
+                if "bugArray" in self.enemiesDict[str(self.tilemap)]:
+                    for bug in self.enemiesDict[str(self.tilemap)]["bugArray"]:
+                        if bug.isActive():
+                            if bomb.isExploding():
+                                if str(bug) not in bomb.getEnemyArr():
+                                    isColliding = bug.checkIfColliding(bombObject)
+                                    if isColliding:
+                                        bug.decreaseHitPoints(2)
+                                        bomb.addEnemyToHitArray(str(bug))
+                if "zoomerArray" in self.enemiesDict[str(self.tilemap)]:
+                    for zoomer in self.enemiesDict[str(self.tilemap)]["zoomerArray"]:
+                        if zoomer.isActive():
+                            if bomb.isExploding():
+                                if str(zoomer) not in bomb.getEnemyArr():
+                                    isColliding = zoomer.checkIfColliding(bombObject)
+                                    if isColliding:
+                                        zoomer.decreaseHitPoints(2)
+                                        bomb.addEnemyToHitArray(str(zoomer))
+
+    def bombExplodableTilesUpdate(self):
+        if str(self.tilemap) in self.explodableTilesDict:
+            for tile in self.explodableTilesDict[str(self.tilemap)]:
+                if tile.isActive():
+                    for bomb in self.bombArr:
+                        if bomb.isExploding():
+                            bombObject = bomb.getBombObject()
+                            if tile.checkIfColliding(bombObject):
+                                tile.explodeTile()
+                else:
+                    tile.decrementCountDown(self.player)
+                                
+    
     # Update
     def Update(self, inputs):
         # Quit check
@@ -3767,11 +4210,15 @@ class Game:
             inputs[engine.QUIT_EVENT] = True
         self.bubbleDoorsUpdate(self.tilemap)
         self.enemiesUpdate(self.tilemap)
+        self.powerUpUpdate(self.tilemap)
         self.playerUpdate(inputs)
         self.bulletsUpdate()
+        self.bombsUpdate()
         self.bulletDoorCollisionUpdate()
         self.handleDoorClosingUpdate()
         self.bulletEnemiesCollisionUpdate()
+        self.bombEnemiesCollisionUpdate()
+        self.bombExplodableTilesUpdate()
         self.doorObjectsUpdate(self.tilemap)
         # update camera
         self.camera.Update()
@@ -3798,6 +4245,23 @@ class Game:
                     if zoomer.isActive():
                         zoomer.getZoomerObject().mSprite.render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
 
+    def renderBombs(self):
+        for bomb in self.bombArr:
+            bomb.getBombObject().mSprite.render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
+
+    def renderPowerUp(self, tilemap):
+        if str(tilemap) in self.powerUpDict and str(tilemap) in self.powerUpActiveDict:
+            if self.powerUpActiveDict[str(tilemap)]:
+                powerUpObject = self.powerUpDict.get(str(tilemap))
+                powerUpObject.mSprite.render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
+
+    def renderExplodableTiles(self, tilemap):
+        if str(tilemap) in self.explodableTilesDict:
+            for tile in self.explodableTilesDict[str(tilemap)]:
+                tileObject = tile.getTileObject()
+                if tile.isActive():
+                    tileObject.mSprite.render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
+
     # Render
     def Render(self):
         #self.sdl.clear(60, 60, 60, 255) # TODO: Set background to black
@@ -3809,6 +4273,9 @@ class Game:
         for key in self.bulletDict.keys():
             self.bulletDict[key][0].mSprite.render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
         self.renderDoorObjects(self.tilemap)
+        self.renderBombs()
+        self.renderPowerUp(self.tilemap)
+        self.renderExplodableTiles(self.tilemap)
         self.sdl.flip()
 
     # Starts or re-starts the game
@@ -3817,7 +4284,6 @@ class Game:
         self.curXDirection = 1 # must be 1 or -1
         self.player.xVel = self.playerRunSpeed
         self.player.yVel = self.playerFallingSpeed
-        # self.timeSinceSpaceTapped = 99
 
     # Delay game loop to reach target fps
     def limitFPS(self):
