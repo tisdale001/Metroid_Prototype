@@ -241,7 +241,7 @@ Collision TileMapComponent::isOnGround(GameObject* o) {
         Sprite* r = o->mSprite;
         int leftTile = (r->getX()) / mSize;
         int rightTile = (r->getX() + r->getWidth()) / mSize;
-        int belowTile = (r->getY() + r->getHeight()) / mSize; // row below object
+        int belowTile = (r->getY() + r->getHeight() + 1) / mSize; // row below object
         // std::cout << "leftTile= " << leftTile << ", rightTile= " << rightTile << ", belowTile= " << belowTile << std::endl;
         std::vector<int> allTypes;
         

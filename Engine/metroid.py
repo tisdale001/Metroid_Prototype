@@ -2,7 +2,6 @@ from lib import engine
 import math
 
 # TODO: Load all rooms for now, later we can figure out how to load them up (memory management)
-# TODO: bugfix: one bullet goes through right wall per jump
 # TODO: bugfix: bug creatures fly through a platform
 
 
