@@ -79,6 +79,8 @@ class Bomb:
         self.destroy = False
         self.countDownNum = 26
         self.enemyArr = []
+        self.bombExplodingSound = engine.Sound()
+        self.bombExplodingSound.SetSound("Assets/Sounds/Metroid_sounds/Sound Effect (18).wav")
 
         self.bombObject = engine.GameObject()
         self.bombPhysics = engine.PhysicsComponent()
@@ -101,6 +103,7 @@ class Bomb:
         self.bombObject.mTransform.xPos = int(self.xPos + self.bombWidth/2 - self.explosionWidth/2)
         self.bombObject.mTransform.yPos = int(self.yPos + self.bombHeight/2 - self.explosionHeight/2)
         self.exploding = True
+        self.bombExplodingSound.PlaySound()
         self.curFrameCount = -1
     def incrementCurrentFrameCount(self):
         if self.exploding:
@@ -160,6 +163,8 @@ class Zoomer:
         self.yVelocityCWArr = [self.zoomerSpeed, self.zoomerSpeed, -self.zoomerSpeed, -self.zoomerSpeed]
         self.xVelocityCCWArr = [-self.zoomerSpeed, self.zoomerSpeed, self.zoomerSpeed, -self.zoomerSpeed]
         self.yVelocityCCWArr = [self.zoomerSpeed, -self.zoomerSpeed, -self.zoomerSpeed, self.zoomerSpeed]
+        self.zoomerHitSound = engine.Sound()
+        self.zoomerHitSound.SetSound("Assets/Sounds/Metroid_sounds/Sound Effect (4).wav")
     def addSpriteToList(self, sprite, maxFrameCount):
         self.spriteArr.append(sprite)
         self.maxFrameCountArr.append(maxFrameCount)
@@ -169,6 +174,7 @@ class Zoomer:
             self.curFrameCount = 0
     def decreaseHitPoints(self, posNum):
         self.hitPoints -= posNum
+        self.zoomerHitSound.PlaySound()
         if self.hitPoints <= 0:
             self.setActiveStatus(False)
     def isGoingClockwise(self):
@@ -253,6 +259,8 @@ class Bug:
         self.waitOneCycleForJumpUpdate = True
         self.originalXPos = self.bugObject.mTransform.xPos
         self.originalYPos = self.bugObject.mTransform.yPos
+        self.bugHitSound = engine.Sound()
+        self.bugHitSound.SetSound("Assets/Sounds/Metroid_sounds/Sound Effect (4).wav")
     def addSpriteToList(self, sprite, maxFrameCount):
         self.spriteArr.append(sprite)
         self.maxFrameCountArr.append(maxFrameCount)
@@ -262,6 +270,7 @@ class Bug:
             self.curFrameCount = 0
     def decreaseHitPoints(self, posNum):
         self.hitPoints -= posNum
+        self.bugHitSound.PlaySound()
         if self.hitPoints <= 0:
             self.setActiveStatus(False)
     def isActive(self):
@@ -329,6 +338,7 @@ class BubbleDoor:
         else:
             self.cx = self.xPos
         self.cy = self.yPos + int(height/2)
+        
     def addSpriteComponent(self, sprite, maxFrameCount):
         self.mSpriteArr.append(sprite)
         self.mMaxFrameCountArr.append(maxFrameCount)
@@ -340,10 +350,9 @@ class BubbleDoor:
         self.mSprite = self.mSpriteArr[idx]
         self.mMaxFrame = self.mMaxFrameCountArr[idx]
     def advanceTimer(self):
-        if self.isClosed_ == False:
+        if self.isClosed_ == False: # Door is open
             self.pauseTimer += 1
         if self.isOpening_:
-            self.isClosed_ = False
             self.mSlowTimer += 0.25
             if self.mSlowTimer >= self.mMaxFrame:
                 self.isOpening_ = False
@@ -367,6 +376,7 @@ class BubbleDoor:
         return self.width
     def openDoor(self):
         self.isOpening_ = True
+        self.isClosed_ = False
         self.setCurrentSpriteComponent(1)
     def closeDoor(self):
         self.isClosing_ = True
@@ -628,14 +638,17 @@ class Game:
         # Sounds
         self.music = engine.Music()
         self.music.SetMusic("Assets/Sounds/78 - Brinstar (Rock Stage).mp3")
-        # self.gameOverSound = engine.Sound()
-        # self.gameOverSound.SetSound("Assets/Sounds/GameOver.wav")
-        # self.winSound = engine.Sound()
-        # self.winSound.SetSound("Assets/Sounds/Win.wav")
-        # self.jumpSound = engine.Sound()
-        # self.jumpSound.SetSound("Assets/Sounds/Jump.wav")
-        # self.speedUpSound = engine.Sound()
-        # self.speedUpSound.SetSound("Assets/Sounds/SpeedUp.wav")
+        self.bombCreatedSound = engine.Sound()
+        self.bombCreatedSound.SetSound("Assets/Sounds/Metroid_sounds/Sound Effect (2).wav")
+        self.bulletCreatedSound = engine.Sound()
+        self.bulletCreatedSound.SetSound("Assets/Sounds/Metroid_sounds/Sound Effect (3).wav")
+        self.doorPoppingSound = engine.Sound()
+        self.doorPoppingSound.SetSound("Assets/Sounds/Metroid_sounds/liquid-bubble.wav")
+        self.doorInflatingSound = engine.Sound()
+        self.doorInflatingSound.SetSound("Assets/Sounds/Metroid_sounds/bubble_single_short.mp3")
+        self.playerJumpSound = engine.Sound()
+        self.playerJumpSound.SetSound("Assets/Sounds/Metroid_sounds/Sound Effect (6).wav")
+        
 
         # Player Settings
         self.playerRunSpeed = 6
@@ -1231,6 +1244,22 @@ class Game:
         self.bubbleDoor6.addSpriteComponent(self.bubble_sprite6_2, 1)
         self.bubbleDoor6.setCurrentSpriteComponent(0)
         self.bubbleDoorDict[str(self.tilemap4)] = [self.bubbleDoor6]
+
+        self.whichDoorToOpenDict = {}
+        self.whichDoorToOpenDict[str(self.tilemap1) + str(self.tilemap2)] = self.bubbleDoor2
+        self.whichDoorToOpenDict[str(self.tilemap2) + str(self.tilemap1)] = self.bubbleDoor1
+        self.whichDoorToOpenDict[str(self.tilemap2) + str(self.tilemap3)] = self.bubbleDoor4
+        self.whichDoorToOpenDict[str(self.tilemap3) + str(self.tilemap2)] = self.bubbleDoor3
+        self.whichDoorToOpenDict[str(self.tilemap3) + str(self.tilemap4)] = self.bubbleDoor6
+        self.whichDoorToOpenDict[str(self.tilemap4) + str(self.tilemap3)] = self.bubbleDoor5
+
+        self.whichDoorToCloseDict = {}
+        self.whichDoorToCloseDict[str(self.tilemap1) + str(self.tilemap2)] = self.bubbleDoor1
+        self.whichDoorToCloseDict[str(self.tilemap2) + str(self.tilemap1)] = self.bubbleDoor2
+        self.whichDoorToCloseDict[str(self.tilemap2) + str(self.tilemap3)] = self.bubbleDoor3
+        self.whichDoorToCloseDict[str(self.tilemap3) + str(self.tilemap2)] = self.bubbleDoor4
+        self.whichDoorToCloseDict[str(self.tilemap3) + str(self.tilemap4)] = self.bubbleDoor5
+        self.whichDoorToCloseDict[str(self.tilemap4) + str(self.tilemap3)] = self.bubbleDoor6
 
     def createBugs(self):
         self.bugObject1 = engine.GameObject()
@@ -2880,7 +2909,7 @@ class Game:
         xVelocity = 8
 
         # close doors
-        self.closeAllDoors(curTilemap, nextTilemap)
+        self.closeCorrectDoor(curTilemap, nextTilemap)
         
         while self.rightCamera.x < 0:
             self.frameStartTime = self.sdl.getTimeMS()
@@ -2900,7 +2929,7 @@ class Game:
         self.resetEnemies(curTilemap)
         
         # open all doors
-        self.openAllDoors(curTilemap, nextTilemap)
+        self.openCorrectDoor(curTilemap, nextTilemap)
         count = 0
         while count <= 5:
             self.frameStartTime = self.sdl.getTimeMS()
@@ -2908,13 +2937,7 @@ class Game:
             self.RenderAnimation(curTilemap, nextTilemap, self.leftCamera, self.rightCamera)
             self.limitFPS()
             count += 1
-        # end bubble door counters
-        if str(curTilemap) in self.bubbleDoorDict:
-            for bubbleDoor in self.bubbleDoorDict[str(curTilemap)]:
-                bubbleDoor.pauseTimer = bubbleDoor.maxPauseTimer + 1
-        if str(nextTilemap) in self.bubbleDoorDict:
-            for bubbleDoor in self.bubbleDoorDict[str(nextTilemap)]:
-                bubbleDoor.pauseTimer = bubbleDoor.maxPauseTimer + 1
+        
         # change tilemap
         self.tilemap = nextTilemap
         self.lvlWidth = self.tilemap.getCols() * self.tileSize
@@ -2967,7 +2990,7 @@ class Game:
         xVelocity = 8
 
         # close doors
-        self.closeAllDoors(nextTilemap, curTilemap)
+        self.closeCorrectDoor(curTilemap, nextTilemap)
         
         while self.leftCamera.x > leftLvlWidth - self.windowWidth:
             self.frameStartTime = self.sdl.getTimeMS()
@@ -2986,7 +3009,7 @@ class Game:
         self.resetEnemies(curTilemap)
         
         # open all doors
-        self.openAllDoors(nextTilemap, curTilemap)
+        self.openCorrectDoor(curTilemap, nextTilemap)
         count = 0
         while count <= 5:
             self.frameStartTime = self.sdl.getTimeMS()
@@ -2994,13 +3017,7 @@ class Game:
             self.RenderAnimation(nextTilemap, curTilemap, self.leftCamera, self.rightCamera)
             self.limitFPS()
             count += 1
-        # end bubble door counters
-        if str(curTilemap) in self.bubbleDoorDict:
-            for bubbleDoor in self.bubbleDoorDict[str(curTilemap)]:
-                bubbleDoor.pauseTimer = bubbleDoor.maxPauseTimer + 1
-        if str(nextTilemap) in self.bubbleDoorDict:
-            for bubbleDoor in self.bubbleDoorDict[str(nextTilemap)]:
-                bubbleDoor.pauseTimer = bubbleDoor.maxPauseTimer + 1
+        
         # change tilemap
         self.tilemap = nextTilemap
         self.lvlWidth = self.tilemap.getCols() * self.tileSize
@@ -3012,21 +3029,17 @@ class Game:
         # place player sprite
         self.player.mTransform.xPos = leftLvlWidth - self.tileSize - self.player.mSprite.getWidth()
 
-    def closeAllDoors(self, curTilemap, nextTilemap):
-        if str(curTilemap) in self.bubbleDoorDict:
-            for bubbleDoor in self.bubbleDoorDict[str(curTilemap)]:
-                bubbleDoor.closeDoor()
-        if str(nextTilemap) in self.bubbleDoorDict:
-            for bubbleDoor in self.bubbleDoorDict[str(nextTilemap)]:
-                bubbleDoor.closeDoor()
+    def closeCorrectDoor(self, curTilemap, nextTilemap):
+        bubbleDoor = self.whichDoorToCloseDict[str(curTilemap) + str(nextTilemap)]
+        bubbleDoor.closeDoor()
+        self.doorInflatingSound.PlaySound()
 
-    def openAllDoors(self, curTilemap, nextTilemap):
-        if str(curTilemap) in self.bubbleDoorDict:
-            for bubbleDoor in self.bubbleDoorDict[str(curTilemap)]:
-                bubbleDoor.openDoor()
-        if str(nextTilemap) in self.bubbleDoorDict:
-            for bubbleDoor in self.bubbleDoorDict[str(nextTilemap)]:
-                bubbleDoor.openDoor()
+    def openCorrectDoor(self, curTilemap, nextTilemap):
+        bubbleDoor = self.whichDoorToOpenDict[str(curTilemap) + str(nextTilemap)]
+        bubbleDoor.openDoor()
+        # end bubble door counter
+        bubbleDoor.pauseTimer = bubbleDoor.maxPauseTimer + 1
+        self.doorPoppingSound.PlaySound()
 
     def resetEnemies(self, tilemap):
         # count = 1
@@ -3046,14 +3059,14 @@ class Game:
                     self.handleBugUpdate(bug, leftTilemap, True)
             if "zoomerArray" in self.enemiesDict[str(leftTilemap)]:
                 for zoomer in self.enemiesDict[str(leftTilemap)]["zoomerArray"]:
-                    self.handleZoomerUpdate(zoomer, leftTilemap)
+                    self.handleZoomerUpdate(zoomer, leftTilemap, True)
         if str(rightTilemap) in self.enemiesDict:
             if "bugArray" in self.enemiesDict[str(rightTilemap)]:
                 for bug in self.enemiesDict[str(rightTilemap)]["bugArray"]:
                     self.handleBugUpdate(bug, rightTilemap, True)
             if "zoomerArray" in self.enemiesDict[str(rightTilemap)]:
                 for zoomer in self.enemiesDict[str(rightTilemap)]["zoomerArray"]:
-                    self.handleZoomerUpdate(zoomer, rightTilemap)
+                    self.handleZoomerUpdate(zoomer, rightTilemap, True)
         if str(leftTilemap) in self.doorObjectsDict.keys():
             for doorObject in self.doorObjectsDict[str(leftTilemap)]:
                 doorObject.mSprite.update(0, 0, 0)
@@ -3125,6 +3138,7 @@ class Game:
             elif self.shotPauseTimer > self.shotPauseMax:
                 self.createBullet()
                 self.shotPauseTimer = 0
+                self.bulletCreatedSound.PlaySound()
         self.shotPauseTimer += 1
     
     def createBullet(self):
@@ -3310,6 +3324,7 @@ class Game:
         else:
             if inputs[engine.J_PRESSED] and currentState == "standing":
                 self.player.InitiateJump()
+                self.playerJumpSound.PlaySound()
                 self.waitOneCycleForJumpUpdate = True
                 self.waitOneCycleToInitiateJump = True
                 # if UP_PRESSED: should go to else statement(uprightJump)
@@ -3403,6 +3418,7 @@ class Game:
                         bomb.setBombPosition(xPos, yPos)
                         self.bombArr.append(bomb)
                         self.countDownBetweenBombs = self.numFramesBetweenBombs
+                        self.bombCreatedSound.PlaySound()
 
     # Handles player touching wall
     def handlePlayerWallCollision(self):
@@ -3811,7 +3827,7 @@ class Game:
                     self.handleBugUpdate(bug, tilemap, False)
             if "zoomerArray" in self.enemiesDict[str(tilemap)]:
                 for zoomer in self.enemiesDict[str(tilemap)]["zoomerArray"]:
-                    self.handleZoomerUpdate(zoomer, tilemap)
+                    self.handleZoomerUpdate(zoomer, tilemap, False)
 
     def getPowerUpFrameCount(self, tilemap):
         res = 0
@@ -3882,7 +3898,7 @@ class Game:
             if self.player.mTransform.xPos >= bug.originalXPos + self.windowWidth or self.player.mTransform.xPos <= bug.originalXPos - self.windowWidth:
                 bug.setActiveStatus(True)
 
-    def handleZoomerUpdate(self, zoomer, tilemap):
+    def handleZoomerUpdate(self, zoomer, tilemap, isAnimating):
         if zoomer.isActive():
             zoomerObject = zoomer.getZoomerObject()
             # update sprite
@@ -3900,8 +3916,8 @@ class Game:
             self.updateZoomer(zoomer, tilemap, curOrientation, zoomer.isGoingClockwise())
         else:
             # only need to check yPos, for now
-            if zoomer.getOriginalYPos() > self.player.mTransform.yPos + self.windowHeight or \
-                zoomer.getOriginalYPos() < self.player.mTransform.yPos - self.windowHeight:
+            if (zoomer.getOriginalYPos() > self.player.mTransform.yPos + self.windowHeight or \
+                zoomer.getOriginalYPos() < self.player.mTransform.yPos - self.windowHeight) and isAnimating == False:
                 zoomer.setActiveStatus(True)
 
     def updateZoomer(self, zoomer, tilemap, curOrientation, isClockwise):
@@ -4119,6 +4135,7 @@ class Game:
                         destroyKey = key
                         # begin opening door
                         bubbleDoor.openDoor()
+                        self.doorPoppingSound.PlaySound()
                         break
         if destroyKey != None:
             del self.bulletDict[key]
@@ -4127,6 +4144,7 @@ class Game:
             del self.physicsDict[key]
 
     def handleDoorClosingUpdate(self):
+        playSound = False
         if str(self.tilemap) in self.bubbleDoorDict:
             for bubbleDoor in self.bubbleDoorDict[str(self.tilemap)]:
                 if bubbleDoor.isClosed() == False and not (bubbleDoor.isClosing() or bubbleDoor.isOpening()):
@@ -4134,10 +4152,14 @@ class Game:
                         if (self.player.mTransform.xPos + self.player.mSprite.getWidth() <= bubbleDoor.getXPos() or
                             self.player.mTransform.yPos + self.player.mSprite.getHeight() <= bubbleDoor.getYPos()) and bubbleDoor.isPauseTimerUp():
                             bubbleDoor.closeDoor()
+                            playSound = True
                     else:
                         if (self.player.mTransform.xPos >= bubbleDoor.getXPos() + bubbleDoor.getWidth() or
                             self.player.mTransform.yPos + self.player.mSprite.getHeight() <= bubbleDoor.getYPos()) and bubbleDoor.isPauseTimerUp():
                             bubbleDoor.closeDoor()
+                            playSound = True
+        if playSound:
+            self.doorInflatingSound.PlaySound()
 
     def bulletEnemiesCollisionUpdate(self):
         destroyArr = []
@@ -4213,8 +4235,8 @@ class Game:
         self.playerUpdate(inputs)
         self.bulletsUpdate()
         self.bombsUpdate()
-        self.bulletDoorCollisionUpdate()
         self.handleDoorClosingUpdate()
+        self.bulletDoorCollisionUpdate()
         self.bulletEnemiesCollisionUpdate()
         self.bombEnemiesCollisionUpdate()
         self.bombExplodableTilesUpdate()

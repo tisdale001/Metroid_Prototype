@@ -1,5 +1,7 @@
 #include "Music.hpp"
 #include "SoundResourceManager.hpp"
+#include <iostream>
+
 
 /** @brief Constructor
  * 
@@ -28,8 +30,10 @@ void Music::SetMusic(char* fileName) {
  * Method plays music contained in musicFile. Performs null check.
 */
 void Music::PlayMusic() {
+	// std::cout << "HERE-1" << std::endl;
     if(musicFile != NULL)
 	{
+		Mix_VolumeMusic(50);
         Mix_PlayMusic(musicFile, -1);
 	}
 }

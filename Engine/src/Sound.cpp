@@ -30,6 +30,7 @@ void Sound::SetSound(char* fileName) {
 void Sound::PlaySound() {
     if(soundFile != NULL)
 	{
+        // Mix_Volume(-1, 128);
         Mix_PlayChannel( -1, soundFile, 0 );
 	}
 }
