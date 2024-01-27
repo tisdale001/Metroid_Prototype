@@ -648,6 +648,8 @@ class Game:
         self.doorInflatingSound.SetSound("Assets/Sounds/Metroid_sounds/bubble_single_short.mp3")
         self.playerJumpSound = engine.Sound()
         self.playerJumpSound.SetSound("Assets/Sounds/Metroid_sounds/Sound Effect (6).wav")
+        self.powerUpSound = engine.Sound()
+        self.powerUpSound.SetSound("Assets/Sounds/Metroid_sounds/Sound Effect (16).wav")
         
 
         # Player Settings
@@ -3713,6 +3715,7 @@ class Game:
                 if checkIfColliding(self.powerUpDict[str(self.tilemap)], self.player):
                     self.hasScrewAttack = True
                     self.powerUpActiveDict[str(self.tilemap)] = False
+                    self.powerUpSound.PlaySound()
 
     def handlePlayerExplodingTileCollisionX(self):
         if str(self.tilemap) in self.explodableTilesDict:
