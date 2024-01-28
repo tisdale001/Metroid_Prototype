@@ -3398,7 +3398,7 @@ class Game:
     # Handles duck and roll and standing back up: sprites are assigned in handlePlayerMove()
     def handleDuckAndRoll(self, inputs, collision):
         if self.playerState.getState() == "standing":
-            if collision.isColliding and (inputs[engine.DOWN_PRESSED] or inputs[engine.S_PRESSED]):
+            if collision.isColliding and (inputs[engine.DOWN_PRESSED] or inputs[engine.S_PRESSED]) and not inputs[engine.J_PRESSED]:
                 # begin duck
                 self.playerState.setState("ducking")
         elif self.playerState.getState() == "ducking":
