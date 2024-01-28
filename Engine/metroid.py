@@ -675,6 +675,8 @@ class Game:
         self.maxHitTimer = 15
         self.backupXDiff = 4
         self.hasScrewAttack = False
+        self.jumpTimerMax = 10
+        self.jumpTimer = 0
 
         # Variables for bullets
         self.bulletDict = {}
@@ -2577,7 +2579,7 @@ class Game:
     # Handles player left and right movement from input
     def handlePlayerMove(self, inputs):
         jumpAgain = False
-        if inputs[engine.J_PRESSED]:
+        if inputs[engine.J_PRESSED] and self.jumpTimer <= 0:
             jumpAgain = True
         if (inputs[engine.LEFT_PRESSED] or inputs[engine.A_PRESSED]) and not (inputs[engine.RIGHT_PRESSED] or inputs[engine.D_PRESSED]):
             if self.playerState.getState() == "standing":
@@ -3266,6 +3268,7 @@ class Game:
 
     # Handles player jump logic
     def handlePlayerJump(self, inputs):
+        self.decrementJumpTimer()
         currentState = self.playerState.getState()
         if currentState == "jumping" or currentState == "aimupjumping":
             wait = False
@@ -3276,7 +3279,7 @@ class Game:
             if not self.playerJump.stillJumping() and not wait:
                 # change to falling
                 self.changeToFalling(inputs)
-            elif inputs[engine.J_PRESSED]:
+            elif inputs[engine.J_PRESSED] and self.jumpTimer <= 0:
                 # continue jump
                 self.playerJump.Update(self.player)
                 if self.uprightJump:
@@ -3325,67 +3328,72 @@ class Game:
                 self.changeToFalling(inputs)
         else:
             if inputs[engine.J_PRESSED] and currentState == "standing":
-                self.player.InitiateJump()
-                self.playerJumpSound.PlaySound()
-                self.waitOneCycleForJumpUpdate = True
-                self.waitOneCycleToInitiateJump = True
-                # if UP_PRESSED: should go to else statement(uprightJump)
-                if (inputs[engine.RIGHT_PRESSED] or inputs[engine.D_PRESSED]) and not (inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]):
-                    self.uprightJump = False
-                    self.playerState.setState("jumping")
-                    self.shootingCounter = self.shootingCounterMax + 1
-                    self.waitOneFrameForShot = True
-                    if self.hasScrewAttack:
-                        self.changePlayerSprite(self.screw_attack_right)
-                    else:
-                        self.changePlayerSprite(self.somersault_right)
-                    self.currentFrame = 0
-                elif (inputs[engine.LEFT_PRESSED] or inputs[engine.A_PRESSED]) and not (inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]):
-                    self.uprightJump = False
-                    self.playerState.setState("jumping")
-                    self.shootingCounter = self.shootingCounterMax + 1
-                    self.waitOneFrameForShot = True
-                    if self.hasScrewAttack:
-                        self.changePlayerSprite(self.screw_attack_left)
-                    else:
-                        self.changePlayerSprite(self.somersault_left)
-                    self.currentFrame = 0
-                else:
-                    self.uprightJump = True
-                    if self.curXDirection > 0:
-                        if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
-                            self.playerState.setState("aimupjumping")
-                            currentWidth = self.player.mSprite.getWidth()
-                            self.changePlayerSprite(self.aim_up_falling_right)
-                            collision = self.tilemap.isTouchingRightWall(self.player)
-                            if collision.isColliding:
-                                self.playerTransform.xPos -= (self.aim_up_falling_right.getWidth() - currentWidth)
+                if self.jumpTimer <= 0:
+                    self.player.InitiateJump()
+                    self.playerJumpSound.PlaySound()
+                    self.waitOneCycleForJumpUpdate = True
+                    self.waitOneCycleToInitiateJump = True
+                    # if UP_PRESSED: should go to else statement(uprightJump)
+                    if (inputs[engine.RIGHT_PRESSED] or inputs[engine.D_PRESSED]) and not (inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]):
+                        self.uprightJump = False
+                        self.playerState.setState("jumping")
+                        self.shootingCounter = self.shootingCounterMax + 1
+                        self.waitOneFrameForShot = True
+                        if self.hasScrewAttack:
+                            self.changePlayerSprite(self.screw_attack_right)
                         else:
-                            self.playerState.setState("jumping")
-                            currentWidth = self.player.mSprite.getWidth()
-                            if self.isShooting():
-                                self.changePlayerSprite(self.shooting_falling_right)
+                            self.changePlayerSprite(self.somersault_right)
+                        self.currentFrame = 0
+                    elif (inputs[engine.LEFT_PRESSED] or inputs[engine.A_PRESSED]) and not (inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]):
+                        self.uprightJump = False
+                        self.playerState.setState("jumping")
+                        self.shootingCounter = self.shootingCounterMax + 1
+                        self.waitOneFrameForShot = True
+                        if self.hasScrewAttack:
+                            self.changePlayerSprite(self.screw_attack_left)
+                        else:
+                            self.changePlayerSprite(self.somersault_left)
+                        self.currentFrame = 0
+                    else:
+                        self.uprightJump = True
+                        if self.curXDirection > 0:
+                            if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
+                                self.playerState.setState("aimupjumping")
+                                currentWidth = self.player.mSprite.getWidth()
+                                self.changePlayerSprite(self.aim_up_falling_right)
                                 collision = self.tilemap.isTouchingRightWall(self.player)
                                 if collision.isColliding:
-                                    self.playerTransform.xPos -= (self.shooting_falling_right.getWidth() - currentWidth)
+                                    self.playerTransform.xPos -= (self.aim_up_falling_right.getWidth() - currentWidth)
                             else:
-                                self.changePlayerSprite(self.falling_right)
-                                self.waitOneFrameForShot = True
-                                collision = self.tilemap.isTouchingRightWall(self.player)
-                                if collision.isColliding:
-                                    self.playerTransform.xPos -= (self.falling_right.getWidth() - currentWidth)
+                                self.playerState.setState("jumping")
+                                currentWidth = self.player.mSprite.getWidth()
+                                if self.isShooting():
+                                    self.changePlayerSprite(self.shooting_falling_right)
+                                    collision = self.tilemap.isTouchingRightWall(self.player)
+                                    if collision.isColliding:
+                                        self.playerTransform.xPos -= (self.shooting_falling_right.getWidth() - currentWidth)
+                                else:
+                                    self.changePlayerSprite(self.falling_right)
+                                    self.waitOneFrameForShot = True
+                                    collision = self.tilemap.isTouchingRightWall(self.player)
+                                    if collision.isColliding:
+                                        self.playerTransform.xPos -= (self.falling_right.getWidth() - currentWidth)
 
-                    else:
-                        if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
-                            self.playerState.setState("aimupjumping")
-                            self.changePlayerSprite(self.aim_up_falling_left)
                         else:
-                            self.playerState.setState("jumping")
-                            if self.isShooting():
-                                self.changePlayerSprite(self.shooting_falling_left)
+                            if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
+                                self.playerState.setState("aimupjumping")
+                                self.changePlayerSprite(self.aim_up_falling_left)
                             else:
-                                self.changePlayerSprite(self.falling_left)
-                                self.waitOneFrameForShot = True
+                                self.playerState.setState("jumping")
+                                if self.isShooting():
+                                    self.changePlayerSprite(self.shooting_falling_left)
+                                else:
+                                    self.changePlayerSprite(self.falling_left)
+                                    self.waitOneFrameForShot = True
+
+    def decrementJumpTimer(self):
+        if self.jumpTimer > 0:
+            self.jumpTimer -= 1
 
     # Handles duck and roll and standing back up: sprites are assigned in handlePlayerMove()
     def handleDuckAndRoll(self, inputs, collision):
@@ -3397,11 +3405,12 @@ class Game:
             self.playerState.setState("rolling")
             self.isFirstRollingFrame = True
         elif self.playerState.getState() == "rolling":
-            if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
+            if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED] or inputs[engine.J_PRESSED]:
                 # check if rolling under an obstacle
                 if self.tilemap.tileAtXY(self.playerTransform.xPos, self.playerTransform.yPos - self.player.mSprite.getHeight()) == -1 and \
                     self.tilemap.tileAtXY(self.playerTransform.xPos + self.player.mSprite.getWidth(), self.playerTransform.yPos - self.player.mSprite.getHeight()) == -1:
                     self.playerState.setState("abouttostand")
+                    self.jumpTimer = self.jumpTimerMax
         elif self.playerState.getState() == "abouttostand":
             self.playerState.setState("standing")
             self.isFirstStandingFrame = True
@@ -3472,7 +3481,7 @@ class Game:
         # if up is pressed, keep sprite as aim-up-jumping but still change playerState to "standing"
         jumpAgain = False
         aimUp = False
-        if inputs[engine.J_PRESSED]:
+        if inputs[engine.J_PRESSED] and self.jumpTimer <= 0:
             jumpAgain = True
         if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
             aimUp = True
