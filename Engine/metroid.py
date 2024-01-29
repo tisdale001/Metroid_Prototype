@@ -230,6 +230,8 @@ class Zoomer:
         return self.zoomerObject
     def getOriginalYPos(self):
         return self.originalYPos
+    def getOriginalXPos(self):
+        return self.originalXPos
     def checkIfColliding(self, obj):
         x1 = self.zoomerObject.mTransform.xPos
         y1 = self.zoomerObject.mTransform.yPos
@@ -576,6 +578,7 @@ class Game:
         # Player Object Setup
         self.player = engine.GameObject()
         self.playerStartXPos = 200
+        # self.playerStartXPos = self.tilemap.getCols() * self.tileSize - (self.tileSize * 8)
         # self.playerStartYPos = self.tilemap3.getRows() * self.tileSize - 500 - (self.tileSize * 14)
         self.playerStartYPos = self.tilemap.getRows() * self.tileSize - (self.tileSize * 3) - 50
         # Player Transform Component
@@ -2499,6 +2502,41 @@ class Game:
         self.zoomerObject32.xVel = self.zoomer32.getCurrentXVelocity()
         self.zoomerObject32.yVel = self.zoomer32.getCurrentYVelocity()
 
+        # zoomer for tilemap1
+        self.zoomerObject33 = engine.GameObject()
+        self.zoomerPhysics33 = engine.PhysicsComponent()
+        self.zoomerTransform33 = engine.Transform()
+        self.zoomerTransform33.xPos = self.tilemap1.getCols() * self.tileSize - (self.tileSize * 13)
+        self.zoomerTransform33.yPos = (self.tileSize * 7) - self.zoomerSize
+        self.zoomer_sprite_33_1 = engine.Sprite(self.zoomerTransform33, True)
+        self.zoomer_sprite_33_1.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 40, 36
+        self.zoomer_sprite_33_1.setSpriteSheetDimensions(18, 14, 8, 7, 2, 2, 0)
+        self.zoomer_sprite_33_1.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+        self.zoomer_sprite_33_2 = engine.Sprite(self.zoomerTransform33, True)
+        self.zoomer_sprite_33_2.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 36, 40
+        self.zoomer_sprite_33_2.setSpriteSheetDimensions(16, 18, 44, 4, 2, 2, 1)
+        self.zoomer_sprite_33_2.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+        self.zoomer_sprite_33_3 = engine.Sprite(self.zoomerTransform33, True)
+        self.zoomer_sprite_33_3.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 40, 36
+        self.zoomer_sprite_33_3.setSpriteSheetDimensions(18, 14, 76, 7, 2, 2, 0)
+        self.zoomer_sprite_33_3.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+        self.zoomer_sprite_33_4 = engine.Sprite(self.zoomerTransform33, True)
+        self.zoomer_sprite_33_4.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 36, 40
+        self.zoomer_sprite_33_4.setSpriteSheetDimensions(16, 18, 112, 4, 2, 2, 1)
+        self.zoomer_sprite_33_4.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+        self.zoomerObject33.addPhysicsComponent(self.zoomerPhysics33)
+        self.zoomerObject33.addTransformComponent(self.zoomerTransform33)
+        self.zoomerObject33.addSpriteComponent(self.zoomer_sprite_33_1)
+        self.zoomerObject33.addTileMapComponent(self.tilemap1)
+        self.zoomer33 = Zoomer(self.zoomerObject33, 0, False)
+        self.zoomer33.addSpriteToList(self.zoomer_sprite_33_1, 1)
+        self.zoomer33.addSpriteToList(self.zoomer_sprite_33_2, 1)
+        self.zoomer33.addSpriteToList(self.zoomer_sprite_33_3, 1)
+        self.zoomer33.addSpriteToList(self.zoomer_sprite_33_4, 1)
+        self.zoomer33.setActiveStatus(True)
+        self.zoomerObject33.xVel = self.zoomer33.getCurrentXVelocity()
+        self.zoomerObject33.yVel = self.zoomer33.getCurrentYVelocity()
+
         self.zoomerArray = []
         self.zoomerArray.append(self.zoomer1)
         self.zoomerArray.append(self.zoomer2)
@@ -2534,6 +2572,7 @@ class Game:
         self.zoomerArray.append(self.zoomer32)
 
         self.enemiesDict[str(self.tilemap3)] = {"zoomerArray": self.zoomerArray}
+        self.enemiesDict[str(self.tilemap1)] = {"zoomerArray": [self.zoomer33]}
 
     def createPowerUpObjects(self):
         self.screwAttackObject = engine.GameObject()
@@ -3927,9 +3966,11 @@ class Game:
                 zoomerObject.xVel = zoomer.getCurrentXVelocity()
             self.updateZoomer(zoomer, tilemap, curOrientation, zoomer.isGoingClockwise())
         else:
-            # only need to check yPos, for now
-            if (zoomer.getOriginalYPos() > self.player.mTransform.yPos + self.windowHeight or \
-                zoomer.getOriginalYPos() < self.player.mTransform.yPos - self.windowHeight) and isAnimating == False:
+            # check if zoomer is offscreen: re-activate
+            if (zoomer.getOriginalYPos() > self.player.mTransform.yPos + self.windowHeight or
+                zoomer.getOriginalYPos() < self.player.mTransform.yPos - self.windowHeight or
+                zoomer.getOriginalXPos() > self.player.mTransform.xPos + self.windowWidth or
+                zoomer.getOriginalXPos() < self.player.mTransform.xPos - self.windowWidth) and isAnimating == False:
                 zoomer.setActiveStatus(True)
 
     def updateZoomer(self, zoomer, tilemap, curOrientation, isClockwise):
