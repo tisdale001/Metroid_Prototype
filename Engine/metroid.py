@@ -3906,12 +3906,10 @@ class Game:
             bugObject.mSprite.update(0, 0, int(bug.getCurrentFrameCount()))
             bugObject.mJumpComponent.Update(bugObject)
             if bugObject.mJumpComponent.stillJumping():
-                print("bug still jumping")
                 # continue jump
                 bugObject.mTransform.xPos += (bug.getCurrentXDirection() * int(bugObject.mJumpComponent.xVelocity))
                 self.checkBugForWallCollision(bug, tilemap)
                 bugObject.mPhysicsComponent.UpdateY(bugObject)
-                print("bug jumpComponent yVelocity = " + str(bugObject.yVel))
                 self.checkBugForFloorAndCeilingCollision(bug, tilemap)
                 oneThirdHeight = bug.jumpHeight // 3
                 if bugObject.mTransform.yPos < bug.originalYPos + oneThirdHeight:
@@ -3924,7 +3922,6 @@ class Game:
                     bug.setCurrentSprite(2)
                     bug.incrementCurrentFrameCount(self.bugFrameIncrement, bug.getMaxFrameCount(2))
             else:
-                print("bug stopped jump")
                 bug.incrementCurrentFrameCount(self.bugFrameIncrement, bug.getMaxFrameCount(0))
                 if bugObject.mTransform.yPos > bug.getOriginalYPos():
                     bugObject.mTransform.xPos += (bug.getCurrentXDirection() * int(bugObject.mJumpComponent.xVelocity))
@@ -3960,11 +3957,9 @@ class Game:
         bugObject = bug.getBugObject()
         rightWallCollision = tilemap.isTouchingRightWall(bugObject)
         if rightWallCollision.isColliding:
-            print("right wall collision")
             bugObject.mTransform.xPos = self.tileSize * rightWallCollision.firstTileColumn - bugObject.mSprite.getWidth() - 1
         leftWallCollision = tilemap.isTouchingLeftWall(bugObject)
         if leftWallCollision.isColliding:
-            print("left wall collision")
             bugObject.mTransform.xPos = self.tileSize * (leftWallCollision.firstTileColumn + 1)
         # check if going through door
         if bugObject.mTransform.xPos < 0:
@@ -3978,14 +3973,11 @@ class Game:
         bugObject = bug.getBugObject()
         floorCollision = tilemap.isOnGround(bugObject)
         if floorCollision.isColliding:
-            print("Floor collision")
-            print("firstTileRow = " + str(floorCollision.firstTileRow))
             bugObject.mTransform.yPos = self.tileSize * (floorCollision.firstTileRow) - bugObject.mSprite.getHeight() - 1
             bugObject.mJumpComponent.EndJump()
         else:
             ceilingCollision = tilemap.isOnGround(bugObject)
             if ceilingCollision.isColliding:
-                print("Ceiling collision")
                 bugObject.mTransform.yPos = self.tileSize * (ceilingCollision.firstTileRow + 1) + 1
 
     def handleBugCeilingCollision(self, bugClass, bugObject, collision):
