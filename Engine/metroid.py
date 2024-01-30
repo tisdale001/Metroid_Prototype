@@ -1,10 +1,6 @@
 from lib import engine
 import math
 
-# TODO: Load all rooms for now, later we can figure out how to load them up (memory management)
-# TODO: bugfix: bug creatures fly through a platform
-
-
 ###############################################################################################################################################################
 
 class ExplodableTile:
@@ -303,6 +299,8 @@ class Bug:
         return self.closeness
     def getBugObject(self):
         return self.bugObject
+    def getOriginalYPos(self):
+        return self.originalYPos
     def checkIfColliding(self, obj):
         x1 = self.bugObject.mTransform.xPos
         y1 = self.bugObject.mTransform.yPos
@@ -3908,9 +3906,13 @@ class Game:
             bugObject.mSprite.update(0, 0, int(bug.getCurrentFrameCount()))
             bugObject.mJumpComponent.Update(bugObject)
             if bugObject.mJumpComponent.stillJumping():
+                print("bug still jumping")
                 # continue jump
-                bugObject.mPhysicsComponent.UpdateY(bugObject)
                 bugObject.mTransform.xPos += (bug.getCurrentXDirection() * int(bugObject.mJumpComponent.xVelocity))
+                self.checkBugForWallCollision(bug, tilemap)
+                bugObject.mPhysicsComponent.UpdateY(bugObject)
+                print("bug jumpComponent yVelocity = " + str(bugObject.yVel))
+                self.checkBugForFloorAndCeilingCollision(bug, tilemap)
                 oneThirdHeight = bug.jumpHeight // 3
                 if bugObject.mTransform.yPos < bug.originalYPos + oneThirdHeight:
                     bug.setCurrentSprite(0)
@@ -3922,7 +3924,11 @@ class Game:
                     bug.setCurrentSprite(2)
                     bug.incrementCurrentFrameCount(self.bugFrameIncrement, bug.getMaxFrameCount(2))
             else:
+                print("bug stopped jump")
                 bug.incrementCurrentFrameCount(self.bugFrameIncrement, bug.getMaxFrameCount(0))
+                if bugObject.mTransform.yPos > bug.getOriginalYPos():
+                    bugObject.mTransform.xPos += (bug.getCurrentXDirection() * int(bugObject.mJumpComponent.xVelocity))
+                self.checkBugForWallCollision(bug, tilemap)
                 bugObject.mPhysicsComponent.UpdateY(bugObject)
                 ceilingCollision = tilemap.isOnCeiling(bugObject)
                 if ceilingCollision.isColliding:
@@ -3943,11 +3949,51 @@ class Game:
                     ceilingCollision = tilemap.isOnCeiling(bugObject)
                     if ceilingCollision.isColliding:
                         bugObject.mTransform.yPos = self.tileSize * (ceilingCollision.firstTileRow + 1)
-            self.checkBugForWallAndFloorCollision(bug, tilemap)
+            # self.checkBugForWallAndFloorCollision(bug, tilemap)
         else:
             # bug is inActive: reactivate if far enough away from player
             if self.player.mTransform.xPos >= bug.originalXPos + self.windowWidth or self.player.mTransform.xPos <= bug.originalXPos - self.windowWidth:
                 bug.setActiveStatus(True)
+
+    def checkBugForWallCollision(self, bug, tilemap):
+        lvlWidth = tilemap.getCols() * self.tileSize
+        bugObject = bug.getBugObject()
+        rightWallCollision = tilemap.isTouchingRightWall(bugObject)
+        if rightWallCollision.isColliding:
+            print("right wall collision")
+            bugObject.mTransform.xPos = self.tileSize * rightWallCollision.firstTileColumn - bugObject.mSprite.getWidth() - 1
+        leftWallCollision = tilemap.isTouchingLeftWall(bugObject)
+        if leftWallCollision.isColliding:
+            print("left wall collision")
+            bugObject.mTransform.xPos = self.tileSize * (leftWallCollision.firstTileColumn + 1)
+        # check if going through door
+        if bugObject.mTransform.xPos < 0:
+            bugObject.mTransform.xPos = 0
+            bug.curXDirection *= -1
+        elif bugObject.mTransform.xPos + bugObject.mSprite.getWidth() >= lvlWidth:
+            bugObject.mTransform.xPos = lvlWidth - bugObject.mSprite.getWidth()
+            bug.curXDirection *= -1
+
+    def checkBugForFloorAndCeilingCollision(self, bug, tilemap):
+        bugObject = bug.getBugObject()
+        floorCollision = tilemap.isOnGround(bugObject)
+        if floorCollision.isColliding:
+            print("Floor collision")
+            print("firstTileRow = " + str(floorCollision.firstTileRow))
+            bugObject.mTransform.yPos = self.tileSize * (floorCollision.firstTileRow) - bugObject.mSprite.getHeight() - 1
+            bugObject.mJumpComponent.EndJump()
+        else:
+            ceilingCollision = tilemap.isOnGround(bugObject)
+            if ceilingCollision.isColliding:
+                print("Ceiling collision")
+                bugObject.mTransform.yPos = self.tileSize * (ceilingCollision.firstTileRow + 1) + 1
+
+    def handleBugCeilingCollision(self, bugClass, bugObject, collision):
+        bugObject.mTransform.yPos = self.tileSize * (collision.firstTileRow + 1)
+        if bugClass.waitOneCycleForJumpUpdate == True:
+            bugClass.waitOneCycleForJumpUpdate = False
+        else:
+            bugObject.mJumpComponent.EndJump()
 
     def handleZoomerUpdate(self, zoomer, tilemap, isAnimating):
         if zoomer.isActive():
@@ -4149,34 +4195,7 @@ class Game:
                                     zoomerObject.yVel = zoomer.getCurrentYVelocity()
                                     zoomerObject.xVel = zoomer.getCurrentXVelocity()
                                     zoomerObject.mTransform.yPos = self.tileSize * (rightWallCollision.firstTileRow + 1) + 1
-            
-    def checkBugForWallAndFloorCollision(self, bug, tilemap):
-        lvlWidth = tilemap.getCols() * self.tileSize
-        bugObject = bug.getBugObject()
-        floorCollision = tilemap.isOnGround(bugObject)
-        rightWallCollision = tilemap.isTouchingRightWall(bugObject)
-        leftWallCollision = tilemap.isTouchingLeftWall(bugObject)
-        if floorCollision.isColliding:
-            bugObject.mTransform.yPos = self.tileSize * (floorCollision.firstTileRow) - bugObject.mSprite.getHeight() - 1
-        if rightWallCollision.isColliding:
-            bugObject.mTransform.xPos = self.tileSize * rightWallCollision.firstTileColumn - bugObject.mSprite.getWidth() - 1
-        if leftWallCollision.isColliding:
-            bugObject.mTransform.xPos = self.tileSize * (leftWallCollision.firstTileColumn + 1)
-        # check if going through door
-        if bugObject.mTransform.xPos < 0:
-            bugObject.mTransform.xPos = 0
-            bug.curXDirection *= -1
-        if bugObject.mTransform.xPos + bugObject.mSprite.getWidth() >= lvlWidth:
-            bugObject.mTransform.xPos = lvlWidth - bugObject.mSprite.getWidth()
-            bug.curXDirection *= -1
 
-    def handleBugCeilingCollision(self, bugClass, bugObject, collision):
-        bugObject.mTransform.yPos = self.tileSize * (collision.firstTileRow + 1)
-        if bugClass.waitOneCycleForJumpUpdate == True:
-            bugClass.waitOneCycleForJumpUpdate = False
-        else:
-            bugObject.mJumpComponent.EndJump()
-    
     def bulletDoorCollisionUpdate(self):
         destroyKey = None
         if str(self.tilemap) in self.bubbleDoorDict:
