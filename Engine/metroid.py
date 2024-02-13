@@ -651,6 +651,8 @@ class Game:
         self.playerJumpSound.SetSound("Assets/Sounds/Metroid_sounds/Sound Effect (6).wav")
         self.powerUpSound = engine.Sound()
         self.powerUpSound.SetSound("Assets/Sounds/Metroid_sounds/Sound Effect (16).wav")
+        self.playerHitSound = engine.Sound()
+        self.playerHitSound.SetSound("Assets/Sounds/Metroid_sounds/Misc_17.wav")
         
 
         # Player Settings
@@ -678,6 +680,9 @@ class Game:
         self.hasScrewAttack = False
         self.jumpTimerMax = 10
         self.jumpTimer = 0
+        self.playerCannotBeHit = False
+        self.playerCannotBeHitTimer = 0
+        self.playerCannotBeHitMax = 30
 
         # Variables for bullets
         self.bulletDict = {}
@@ -3687,8 +3692,13 @@ class Game:
                     return
     
     def handleEnemyCollision(self, inputs):
-        if self.playerIsHit == True:
-            self.hitTimer += 1
+        if self.playerCannotBeHit == True:
+            self.playerCannotBeHitTimer += 1
+            if self.playerCannotBeHitTimer > self.playerCannotBeHitMax:
+                self.playerCannotBeHitTimer = 0
+                self.playerCannotBeHit = False
+            if self.playerIsHit == True:
+                self.hitTimer += 1
             if self.hitTimer > self.maxHitTimer:
                 self.hitTimer = 0
                 self.playerIsHit = False
@@ -3722,6 +3732,8 @@ class Game:
                                     self.player.mJumpComponent.EndJump()
                                     self.uprightJump = False
                                     self.playerIsHit = True
+                                    self.playerCannotBeHit = True
+                                    self.playerHitSound.PlaySound()
                                     if bug.getCurrentXDirection() > 0:
                                         self.backupRight = True
                                     else:
@@ -3737,6 +3749,8 @@ class Game:
                                     self.player.mJumpComponent.EndJump()
                                     self.uprightJump = False
                                     self.playerIsHit = True
+                                    self.playerCannotBeHit = True
+                                    self.playerHitSound.PlaySound()
                                     if self.curXDirection > 0:
                                         self.backupLeft = True
                                     else:
