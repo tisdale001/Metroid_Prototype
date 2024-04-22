@@ -1,6 +1,9 @@
 from lib import engine
 import math
 
+EXPLOSION_WIDTH = 80
+EXPLOSION_HEIGHT = 80
+
 ###############################################################################################################################################################
 
 class ExplodableTile:
@@ -522,6 +525,40 @@ class BubbleDoor:
                     # middle of door: use half of height for y
                     return 0
         return 0
+    
+class EnemyExplosion:
+    def __init__(self, xPos, yPos, tilemap, sdl):
+        self.xPos = xPos
+        self.yPos = yPos
+        self.tilemap = tilemap
+        self.sdl = sdl
+        self.width = EXPLOSION_WIDTH
+        self.height = EXPLOSION_HEIGHT
+        self.frameCount = -0.25
+        self.destroy = False
+        self.createSprite()
+    def createSprite(self):
+        # self.explosionObject = engine.GameObject()
+        # self.explosionPhysics = engine.PhysicsComponent()
+        self.explosionTransform = engine.Transform()
+        self.explosionTransform.xPos = int(self.xPos)
+        self.explosionTransform.yPos = int(self.yPos)
+        # (width of sprite, height of sprite, start x, start y, max num sprites in a row, total num sprites, numPixelsToTrimFromWidth)
+        self.explosion_sprite = engine.Sprite(self.explosionTransform, True)
+        self.explosion_sprite.setRectangleDimensions(self.width, self.height)
+        self.explosion_sprite.setSpriteSheetDimensions(802, 202, 877 - 802, 85, 2, 2, 598)
+        self.explosion_sprite.loadImage('Assets/spritesheets/enemy_explosion_transparent.png', self.sdl.getSDLRenderer())
+    def advanceFrameCount(self):
+        self.frameCount += 0.25
+        if self.frameCount >= 2:
+            self.frameCount = 0
+            self.destroy = True
+    def getFrameCount(self):
+        return self.frameCount
+    def getSprite(self):
+        return self.explosion_sprite
+    def shouldDestroy(self):
+        return self.destroy
 
 class PlayerState:
     def __init__(self):
@@ -701,6 +738,10 @@ class Game:
         self.numFramesBetweenBombs = 8
         self.countDownBetweenBombs = 0
 
+        # Enemy Explosions
+        self.enemyExplosionArr = []
+        # self.createEnemyExplosion(300, self.tilemap.getRows() * self.tileSize - (self.tileSize * 3) - 50)
+
         # Game Variables
         self.player.xVel = self.playerRunSpeed
         self.player.yVel = self.playerFallingSpeed
@@ -715,6 +756,10 @@ class Game:
         self.startTime = self.sdl.getTimeMS()
         self.frameUpdateDelay = 0
         self.maxFrameUpdateDelay = 2
+
+    def createEnemyExplosion(self, xPos, yPos):
+        ex = EnemyExplosion(xPos, yPos, self.tilemap, self.sdl)
+        self.enemyExplosionArr.append(ex)
 
     def createPlayerSprites(self):
         '''
@@ -2621,7 +2666,7 @@ class Game:
     # Handles player left and right movement from input
     def handlePlayerMove(self, inputs):
         jumpAgain = False
-        if inputs[engine.J_PRESSED] and self.jumpTimer <= 0:
+        if (inputs[engine.J_PRESSED] or inputs[engine.Z_PRESSED]) and self.jumpTimer <= 0:
             jumpAgain = True
         if (inputs[engine.LEFT_PRESSED] or inputs[engine.A_PRESSED]) and not (inputs[engine.RIGHT_PRESSED] or inputs[engine.D_PRESSED]):
             if self.playerState.getState() == "standing":
@@ -3177,7 +3222,7 @@ class Game:
 
     def handlePlayerShooting(self, inputs):
         state = self.playerState.getState()
-        if (inputs[engine.H_PRESSED] or inputs[engine.K_PRESSED] and not (state == "rolling" or state == "ducking" or state == "abouttostand")):
+        if (inputs[engine.H_PRESSED] or inputs[engine.K_PRESSED] or inputs[engine.X_PRESSED] and not (state == "rolling" or state == "ducking" or state == "abouttostand")):
             self.shootingCounter = 0
             if self.waitOneFrameForShot:
                 self.waitOneFrameForShot = False
@@ -3321,7 +3366,7 @@ class Game:
             if not self.playerJump.stillJumping() and not wait:
                 # change to falling
                 self.changeToFalling(inputs)
-            elif inputs[engine.J_PRESSED] and self.jumpTimer <= 0:
+            elif (inputs[engine.J_PRESSED] or inputs[engine.Z_PRESSED]) and self.jumpTimer <= 0:
                 # continue jump
                 self.playerJump.Update(self.player)
                 if self.uprightJump:
@@ -3369,7 +3414,7 @@ class Game:
                 self.playerState.setState("falling")
                 self.changeToFalling(inputs)
         else:
-            if inputs[engine.J_PRESSED] and currentState == "standing":
+            if (inputs[engine.J_PRESSED] or inputs[engine.Z_PRESSED]) and currentState == "standing":
                 if self.jumpTimer <= 0:
                     self.player.InitiateJump()
                     self.playerJumpSound.PlaySound()
@@ -3440,14 +3485,14 @@ class Game:
     # Handles duck and roll and standing back up: sprites are assigned in handlePlayerMove()
     def handleDuckAndRoll(self, inputs, collision):
         if self.playerState.getState() == "standing":
-            if collision.isColliding and (inputs[engine.DOWN_PRESSED] or inputs[engine.S_PRESSED]) and not inputs[engine.J_PRESSED]:
+            if collision.isColliding and (inputs[engine.DOWN_PRESSED] or inputs[engine.S_PRESSED]) and not (inputs[engine.J_PRESSED] or inputs[engine.Z_PRESSED]):
                 # begin duck
                 self.playerState.setState("ducking")
         elif self.playerState.getState() == "ducking":
             self.playerState.setState("rolling")
             self.isFirstRollingFrame = True
         elif self.playerState.getState() == "rolling":
-            if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED] or inputs[engine.J_PRESSED]:
+            if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED] or (inputs[engine.J_PRESSED] or inputs[engine.Z_PRESSED]):
                 # check if rolling under an obstacle
                 if self.tilemap.tileAtXY(self.playerTransform.xPos, self.playerTransform.yPos - self.player.mSprite.getHeight()) == -1 and \
                     self.tilemap.tileAtXY(self.playerTransform.xPos + self.player.mSprite.getWidth(), self.playerTransform.yPos - self.player.mSprite.getHeight()) == -1:
@@ -3462,7 +3507,7 @@ class Game:
             self.countDownBetweenBombs -= 1
         # must be rolling, fire pressed, countDownBetweenBombs <= 0, numBombs <= 3
         if self.playerState.getState() == "rolling":
-            if inputs[engine.H_PRESSED] or inputs[engine.K_PRESSED]:
+            if inputs[engine.H_PRESSED] or inputs[engine.K_PRESSED] or inputs[engine.X_PRESSED]:
                 if len(self.bombArr) < 3:
                     if self.countDownBetweenBombs <= 0:
                         bomb = Bomb(self.tilemap, self.sdl)
@@ -3523,7 +3568,7 @@ class Game:
         # if up is pressed, keep sprite as aim-up-jumping but still change playerState to "standing"
         jumpAgain = False
         aimUp = False
-        if inputs[engine.J_PRESSED] and self.jumpTimer <= 0:
+        if (inputs[engine.J_PRESSED] or inputs[engine.Z_PRESSED]) and self.jumpTimer <= 0:
             jumpAgain = True
         if inputs[engine.UP_PRESSED] or inputs[engine.W_PRESSED]:
             aimUp = True
@@ -3728,6 +3773,10 @@ class Game:
                             if isColliding:
                                 if self.player.mSprite == self.screw_attack_left or self.player.mSprite == self.screw_attack_right:
                                     bug.decreaseHitPoints(100)
+                                    if not bug.isActive():
+                                        bugObject = bug.getBugObject()
+                                        self.createEnemyExplosion(bugObject.mTransform.xPos + bugObject.mSprite.getWidth()/2 - EXPLOSION_WIDTH/2,
+                                                                  bugObject.mTransform.yPos + bugObject.mSprite.getHeight()/2 - EXPLOSION_HEIGHT/2)
                                 else:
                                     self.player.mJumpComponent.EndJump()
                                     self.uprightJump = False
@@ -3745,6 +3794,10 @@ class Game:
                             if isColliding:
                                 if self.player.mSprite == self.screw_attack_left or self.player.mSprite == self.screw_attack_right:
                                     zoomer.decreaseHitPoints(100)
+                                    if not zoomer.isActive():
+                                        zoomerObject = zoomer.getZoomerObject()
+                                        self.createEnemyExplosion(zoomerObject.mTransform.xPos + zoomerObject.mSprite.getWidth()/2 - EXPLOSION_WIDTH/2,
+                                                                zoomerObject.mTransform.yPos + zoomerObject.mSprite.getHeight()/2 - EXPLOSION_HEIGHT/2)
                                 else:
                                     self.player.mJumpComponent.EndJump()
                                     self.uprightJump = False
@@ -4252,6 +4305,10 @@ class Game:
                                 if key not in destroyArr:
                                     destroyArr.append(key)
                                     bug.decreaseHitPoints(1)
+                                    if not bug.isActive():
+                                        bugObject = bug.getBugObject()
+                                        self.createEnemyExplosion(bugObject.mTransform.xPos + bugObject.mSprite.getWidth()/2 - EXPLOSION_WIDTH/2,
+                                                                bugObject.mTransform.yPos + bugObject.mSprite.getHeight()/2 - EXPLOSION_HEIGHT/2)
                 if "zoomerArray" in self.enemiesDict[str(self.tilemap)]:
                     for zoomer in self.enemiesDict[str(self.tilemap)]["zoomerArray"]:
                         if zoomer.isActive():
@@ -4260,6 +4317,10 @@ class Game:
                                 if key not in destroyArr:
                                     destroyArr.append(key)
                                     zoomer.decreaseHitPoints(1)
+                                    if not zoomer.isActive():
+                                        zoomerObject = zoomer.getZoomerObject()
+                                        self.createEnemyExplosion(zoomerObject.mTransform.xPos + zoomerObject.mSprite.getWidth()/2 - EXPLOSION_WIDTH/2,
+                                                                zoomerObject.mTransform.yPos + zoomerObject.mSprite.getHeight()/2 - EXPLOSION_HEIGHT/2)
         for key in destroyArr:
             del self.bulletDict[key]
             del self.spriteDict[key]
@@ -4279,6 +4340,10 @@ class Game:
                                     if isColliding:
                                         bug.decreaseHitPoints(2)
                                         bomb.addEnemyToHitArray(str(bug))
+                                        if not bug.isActive():
+                                            bugObject = bug.getBugObject()
+                                            self.createEnemyExplosion(bugObject.mTransform.xPos + bugObject.mSprite.getWidth()/2 - EXPLOSION_WIDTH/2,
+                                                                bugObject.mTransform.yPos + bugObject.mSprite.getHeight()/2 - EXPLOSION_HEIGHT/2)
                 if "zoomerArray" in self.enemiesDict[str(self.tilemap)]:
                     for zoomer in self.enemiesDict[str(self.tilemap)]["zoomerArray"]:
                         if zoomer.isActive():
@@ -4288,6 +4353,10 @@ class Game:
                                     if isColliding:
                                         zoomer.decreaseHitPoints(2)
                                         bomb.addEnemyToHitArray(str(zoomer))
+                                        if not zoomer.isActive():
+                                            zoomerObject = zoomer.getZoomerObject()
+                                            self.createEnemyExplosion(zoomerObject.mTransform.xPos + zoomerObject.mSprite.getWidth()/2 - EXPLOSION_WIDTH/2,
+                                                                      zoomerObject.mTransform.yPos + zoomerObject.mSprite.getHeight()/2 - EXPLOSION_HEIGHT/2)
 
     def bombExplodableTilesUpdate(self):
         if str(self.tilemap) in self.explodableTilesDict:
@@ -4300,8 +4369,19 @@ class Game:
                                 tile.explodeTile()
                 else:
                     tile.decrementCountDown(self.player)
-                                
-    
+
+    def enemyExplosionsUpdate(self):
+        indexArr = []
+        for i in range(len(self.enemyExplosionArr)):
+            self.enemyExplosionArr[i].advanceFrameCount()
+            self.enemyExplosionArr[i].getSprite().update(0, 0, int(self.enemyExplosionArr[i].getFrameCount()))
+            # if shouldDestroy(): put index in indexArr
+            if self.enemyExplosionArr[i].shouldDestroy():
+                indexArr.append(i)
+        indexArr.sort(reverse=True)
+        for idx in indexArr:
+            self.enemyExplosionArr.pop(idx)
+
     # Update
     def Update(self, inputs):
         # Quit check
@@ -4319,6 +4399,7 @@ class Game:
         self.bombEnemiesCollisionUpdate()
         self.bombExplodableTilesUpdate()
         self.doorObjectsUpdate(self.tilemap)
+        self.enemyExplosionsUpdate()
         # update camera
         self.camera.Update()
     
@@ -4361,9 +4442,13 @@ class Game:
                 if tile.isActive():
                     tileObject.mSprite.render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
 
+    def renderEnemyExplosions(self):
+        for ex in self.enemyExplosionArr:
+            ex.getSprite().render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
+
     # Render
     def Render(self):
-        #self.sdl.clear(60, 60, 60, 255) # TODO: Set background to black
+        # self.sdl.clear(60, 60, 60, 255) # TODO: Set background to black
         self.sdl.clear(0, 0, 0, 0) # This is code for black background
         self.tilemap.Render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
         self.renderBubbleDoors(self.tilemap)
@@ -4375,6 +4460,7 @@ class Game:
         self.renderBombs()
         self.renderPowerUp(self.tilemap)
         self.renderExplodableTiles(self.tilemap)
+        self.renderEnemyExplosions()
         self.sdl.flip()
 
     # Starts or re-starts the game
@@ -4389,9 +4475,9 @@ class Game:
         frameTicks = self.sdl.getTimeMS() - self.frameStartTime
         if frameTicks < self.maxTicksPerFrame:
             self.sdl.delay(self.maxTicksPerFrame - frameTicks)
-        self.frame_count += 1
-        timeElapsed = self.sdl.getTimeMS() - self.startTime
-        fps = self.frame_count / (timeElapsed / 1000)
+        # self.frame_count += 1
+        # timeElapsed = self.sdl.getTimeMS() - self.startTime
+        # fps = self.frame_count / (timeElapsed / 1000)
 
     # Main Loop
     def RunLoop(self):
