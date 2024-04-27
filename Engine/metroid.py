@@ -1,8 +1,11 @@
 from lib import engine
 import math
+import random
 
 EXPLOSION_WIDTH = 80
 EXPLOSION_HEIGHT = 80
+ENERGY_ORB_WIDTH = 15
+ENERGY_ORB_HEIGHT = 15
 
 ###############################################################################################################################################################
 
@@ -557,8 +560,74 @@ class EnemyExplosion:
         return self.frameCount
     def getSprite(self):
         return self.explosion_sprite
+    def getXPos(self):
+        return self.xPos
+    def getYPos(self):
+        return self.yPos
+    def getWidth(self):
+        return self.width
+    def getHeight(self):
+        return self.height
     def shouldDestroy(self):
         return self.destroy
+    
+class EnergyOrb:
+    def __init__(self, xPos, yPos, tilemap, sdl):
+        self.xPos = xPos
+        self.yPos = yPos
+        self.tilemap = tilemap
+        self.sdl = sdl
+        self.width = ENERGY_ORB_WIDTH
+        self.height = ENERGY_ORB_HEIGHT
+        self.frameCount = -1
+        self.maxFrameCount = 2
+        self.countDownNum = 200
+        self.destroy = False
+        self.createSprite()
+    def createSprite(self):
+        self.energyOrbObject = engine.GameObject()
+        self.energyOrbPhysics = engine.PhysicsComponent()
+        self.energyOrbTransform = engine.Transform()
+        self.energyOrbTransform.xPos = int(self.xPos)
+        self.energyOrbTransform.yPos = int(self.yPos)
+        # (width of sprite, height of sprite, start x, start y, max num sprites in a row, total num sprites, numPixelsToTrimFromWidth)
+        self.energy_orb_sprite = engine.Sprite(self.energyOrbTransform, True)
+        self.energy_orb_sprite.setRectangleDimensions(self.width, self.height)
+        self.energy_orb_sprite.setSpriteSheetDimensions(796, 200, 82, 82, 2, 2, 600)
+        self.maxFrameCount = 2
+        self.energy_orb_sprite.loadImage('Assets/spritesheets/energy_orb_spritesheet_transparent.png', self.sdl.getSDLRenderer())
+        self.energyOrbObject.addTileMapComponent(self.tilemap)
+        self.energyOrbObject.addPhysicsComponent(self.energyOrbPhysics)
+        self.energyOrbObject.addTransformComponent(self.energyOrbTransform)
+        self.energyOrbObject.addSpriteComponent(self.energy_orb_sprite)
+    def advanceFrameCount(self):
+        self.frameCount += 1
+        if self.frameCount >= self.maxFrameCount:
+            self.frameCount = 0
+    def decrementCountDown(self):
+        # if not self.exploding:
+        self.countDownNum -= 1
+        if self.countDownNum <= 0:
+            self.destroy = True
+    def getFrameCount(self):
+        return self.frameCount
+    def getEnergyOrbObject(self):
+        return self.energyOrbObject
+    def shouldDestroy(self):
+        return self.destroy
+    def checkIfColliding(self, obj):
+        x1 = self.energyOrbObject.mTransform.xPos
+        y1 = self.energyOrbObject.mTransform.yPos
+        width1 = self.energyOrbObject.mSprite.getWidth()
+        height1 = self.energyOrbObject.mSprite.getHeight()
+        x2 = obj.mTransform.xPos
+        y2 = obj.mTransform.yPos
+        width2 = obj.mSprite.getWidth()
+        height2 = obj.mSprite.getHeight()
+        if (x1 < x2 + width2 and x1 + width1 > x2 and
+                y1 < y2 + height2 and y1 + height1 > y2):
+            return True
+        return False
 
 class PlayerState:
     def __init__(self):
@@ -690,6 +759,8 @@ class Game:
         self.powerUpSound.SetSound("Assets/Sounds/Metroid_sounds/Sound Effect (16).wav")
         self.playerHitSound = engine.Sound()
         self.playerHitSound.SetSound("Assets/Sounds/Metroid_sounds/Misc_17.wav")
+        self.energyOrbSound = engine.Sound()
+        self.energyOrbSound.SetSound("Assets/Sounds/Metroid_sounds/Sound Effect (9).wav")
         
 
         # Player Settings
@@ -742,6 +813,10 @@ class Game:
         self.enemyExplosionArr = []
         # self.createEnemyExplosion(300, self.tilemap.getRows() * self.tileSize - (self.tileSize * 3) - 50)
 
+        # Energy Orbs
+        self.energyOrbArr = []
+        # self.createEnergyOrb(300, self.tilemap.getRows() * self.tileSize - (self.tileSize * 3) - 50)
+
         # Game Variables
         self.player.xVel = self.playerRunSpeed
         self.player.yVel = self.playerFallingSpeed
@@ -760,6 +835,10 @@ class Game:
     def createEnemyExplosion(self, xPos, yPos):
         ex = EnemyExplosion(xPos, yPos, self.tilemap, self.sdl)
         self.enemyExplosionArr.append(ex)
+
+    def createEnergyOrb(self, xPos, yPos):
+        energyOrb = EnergyOrb(xPos, yPos, self.tilemap, self.sdl)
+        self.energyOrbArr.append(energyOrb)
 
     def createPlayerSprites(self):
         '''
@@ -3841,6 +3920,19 @@ class Game:
                         else:
                             self.player.mTransform.xPos = tileObject.mTransform.xPos + tileObject.mSprite.getWidth() + 1
 
+    def handleEnergyOrbCollision(self):
+        indexArr = []
+        for i in range(len(self.energyOrbArr)):
+            energyOrb = self.energyOrbArr[i]
+            if energyOrb.checkIfColliding(self.player):
+                # add to indexArr
+                indexArr.append(i)
+        indexArr.sort(reverse=True)
+        for idx in indexArr:
+            self.energyOrbArr.pop(idx)
+            # play sound
+            self.energyOrbSound.PlaySound()
+
 
                     
     # Handles all player associated updates
@@ -3851,6 +3943,7 @@ class Game:
         self.physics.UpdateX(self.player)
         self.handleEnemyCollision(inputs)
         self.handlePowerUpCollision()
+        self.handleEnergyOrbCollision()
         self.handlePlayerWallCollision()
         self.handleDoorCollisionX()
         self.handlePlayerExplodingTileCollisionX()
@@ -4380,7 +4473,27 @@ class Game:
                 indexArr.append(i)
         indexArr.sort(reverse=True)
         for idx in indexArr:
+            # create orb
+            explosion = self.enemyExplosionArr[idx]
+            randNum = random.randint(1, 10)
+            if randNum <= 7:
+                self.createEnergyOrb(explosion.getXPos() + explosion.getWidth()//2 - ENERGY_ORB_WIDTH//2,
+                                             explosion.getYPos() + explosion.getHeight()//2 - ENERGY_ORB_HEIGHT//2)
+            # pop explosion from array
             self.enemyExplosionArr.pop(idx)
+
+    def energyOrbUpdate(self):
+        indexArr = []
+        for i in range(len(self.energyOrbArr)):
+            self.energyOrbArr[i].advanceFrameCount()
+            self.energyOrbArr[i].getEnergyOrbObject().mSprite.update(0, 0, int(self.energyOrbArr[i].getFrameCount()))
+            self.energyOrbArr[i].decrementCountDown()
+            # if shouldDestroy(): put index in indexArr
+            if self.energyOrbArr[i].shouldDestroy():
+                indexArr.append(i)
+        indexArr.sort(reverse=True)
+        for idx in indexArr:
+            self.energyOrbArr.pop(idx)
 
     # Update
     def Update(self, inputs):
@@ -4400,6 +4513,7 @@ class Game:
         self.bombExplodableTilesUpdate()
         self.doorObjectsUpdate(self.tilemap)
         self.enemyExplosionsUpdate()
+        self.energyOrbUpdate()
         # update camera
         self.camera.Update()
     
@@ -4445,10 +4559,14 @@ class Game:
     def renderEnemyExplosions(self):
         for ex in self.enemyExplosionArr:
             ex.getSprite().render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
+    
+    def renderEnergyOrbs(self):
+        for energyOrb in self.energyOrbArr:
+            energyOrb.getEnergyOrbObject().mSprite.render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
 
     # Render
     def Render(self):
-        # self.sdl.clear(60, 60, 60, 255) # TODO: Set background to black
+        #self.sdl.clear(60, 60, 60, 255) # TODO: Set background to black
         self.sdl.clear(0, 0, 0, 0) # This is code for black background
         self.tilemap.Render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
         self.renderBubbleDoors(self.tilemap)
@@ -4461,6 +4579,7 @@ class Game:
         self.renderPowerUp(self.tilemap)
         self.renderExplodableTiles(self.tilemap)
         self.renderEnemyExplosions()
+        self.renderEnergyOrbs()
         self.sdl.flip()
 
     # Starts or re-starts the game
