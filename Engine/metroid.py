@@ -3308,7 +3308,7 @@ class Game:
             elif self.shotPauseTimer > self.shotPauseMax:
                 self.createBullet()
                 self.shotPauseTimer = 0
-                self.bulletCreatedSound.PlaySound()
+                self.bulletCreatedSound.PlaySound(2)
         self.shotPauseTimer += 1
     
     def createBullet(self):
@@ -3931,7 +3931,7 @@ class Game:
         for idx in indexArr:
             self.energyOrbArr.pop(idx)
             # play sound
-            self.energyOrbSound.PlaySound()
+            self.energyOrbSound.PlaySound(3)
 
 
                     

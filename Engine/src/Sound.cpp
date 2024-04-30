@@ -34,3 +34,11 @@ void Sound::PlaySound() {
         Mix_PlayChannel( -1, soundFile, 0 );
 	}
 }
+
+void Sound::PlaySound(int specificChannel) {
+    if(soundFile != NULL)
+	{
+        // Mix_Volume(-1, 128);
+        Mix_PlayChannel( specificChannel, soundFile, 0 );
+	}
+}

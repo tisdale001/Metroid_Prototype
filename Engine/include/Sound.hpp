@@ -19,6 +19,7 @@ class Sound {
         void SetSound(char* fileName);
 
         void PlaySound();
+        void PlaySound(int specificChannel);
 
     private:
         Mix_Chunk *soundFile;

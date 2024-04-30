@@ -188,7 +188,8 @@ PYBIND11_MODULE(engine, e) {
     py::class_<Sound>(e, "Sound")
         .def(py::init<>())
         .def("SetSound", &Sound::SetSound)
-        .def("PlaySound", &Sound::PlaySound);
+        .def("PlaySound", py::overload_cast<>(&Sound::PlaySound))
+        .def("PlaySound", py::overload_cast<int>(&Sound::PlaySound));  // int parameter
 
     py::class_<Music>(e, "Music")
         .def(py::init<>())
