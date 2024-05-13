@@ -7,6 +7,11 @@ EXPLOSION_HEIGHT = 80
 ENERGY_ORB_WIDTH = 15
 ENERGY_ORB_HEIGHT = 15
 
+# TODO: create the energy display, make class for display for positioning
+# TODO: keep track of energy points
+# TODO: create the death sprite
+# TODO: create respawn scene?
+
 ###############################################################################################################################################################
 
 class ExplodableTile:
@@ -797,7 +802,7 @@ class Game:
         self.bulletSpeed = 12
         self.shotPauseMax = 5
         self.shotPauseTimer = self.shotPauseMax + 1
-        self.shotLifeMax = 30
+        self.shotLifeMax = 14
         self.bulletIndex = 0
         self.spriteDict = {}
         self.transformDict = {}
