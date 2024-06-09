@@ -58,6 +58,10 @@ void GameObject::addJumpComponent(JumpComponent* jumpComponent) {
     mJumpComponent = jumpComponent;
 }
 
+void GameObject::addSineWaveComponent(SineWaveComponent* sineWaveComponent) {
+    mSineWaveComponent = sineWaveComponent;
+}
+
 /** @brief Adds RectangleComponent
  * 
  * Adds pre-existing RectangleComponent to GameObject as mRectangle. Used instead of sprite in early development.

@@ -7,12 +7,358 @@ EXPLOSION_HEIGHT = 80
 ENERGY_ORB_WIDTH = 15
 ENERGY_ORB_HEIGHT = 15
 
-# TODO: create the energy display, make class for display for positioning
-# TODO: keep track of energy points
+
 # TODO: create the death sprite
 # TODO: create respawn scene?
 
+# TODO: Make a bigger map by adding rooms
+
 ###############################################################################################################################################################
+class PlayerDisplay:
+    def __init__(self, sdl):
+        self.sdl = sdl
+        self.xPos = 20
+        self.yPos = 20
+        self.energyBoxDist = 24
+        self.hitPoints = 20
+        self.maxHitPoints = 499
+        self.createSprites()
+        self.createEnergyBoxes()
+    def createSprites(self):
+        # letter E
+        self.eObject = engine.GameObject()
+        self.ePhysics = engine.PhysicsComponent()
+        self.eTransform = engine.Transform()
+        self.eTransform.xPos = self.xPos
+        self.eTransform.yPos = self.yPos + self.energyBoxDist
+        self.e_sprite = engine.Sprite(self.eTransform, True)
+        self.e_sprite.setRectangleDimensions(16, 20)
+        self.e_sprite.setSpriteSheetDimensions(250, 300, 0, 0, 1, 1, 0)
+        self.e_sprite.loadImage('Assets/spritesheets/E-300_transparent.png', self.sdl.getSDLRenderer())
+        self.e_sprite.update(0,0,0)
+        self.eObject.addPhysicsComponent(self.ePhysics)
+        self.eObject.addTransformComponent(self.eTransform)
+        self.eObject.addSpriteComponent(self.e_sprite)
+        # letter N
+        self.nObject = engine.GameObject()
+        self.nPhysics = engine.PhysicsComponent()
+        self.nTransform = engine.Transform()
+        self.nTransform.xPos = self.xPos + 16 + 3
+        self.nTransform.yPos = self.yPos + self.energyBoxDist
+        self.n_sprite = engine.Sprite(self.nTransform, True)
+        self.n_sprite.setRectangleDimensions(18, 20)
+        self.n_sprite.setSpriteSheetDimensions(300, 300, 0, 0, 1, 1, 0)
+        self.n_sprite.loadImage('Assets/spritesheets/N-300_transparent.png', self.sdl.getSDLRenderer())
+        self.n_sprite.update(0,0,0)
+        self.nObject.addPhysicsComponent(self.nPhysics)
+        self.nObject.addTransformComponent(self.nTransform)
+        self.nObject.addSpriteComponent(self.n_sprite)
+        # dot1
+        self.dotObject1 = engine.GameObject()
+        self.dotPhysics1 = engine.PhysicsComponent()
+        self.dotTransform1 = engine.Transform()
+        self.dotTransform1.xPos = self.xPos + 16 + 3 + 18 + 3
+        self.dotTransform1.yPos = self.yPos + 20 - 10 + self.energyBoxDist
+        self.dot_sprite_1 = engine.Sprite(self.dotTransform1, True)
+        self.dot_sprite_1.setRectangleDimensions(10, 10)
+        self.dot_sprite_1.setSpriteSheetDimensions(1200, 1200, 350, 450, 1, 1, 0)
+        self.dot_sprite_1.loadImage('Assets/spritesheets/orange_ball_transparent.png', self.sdl.getSDLRenderer())
+        self.dot_sprite_1.update(0,0,0)
+        self.dotObject1.addPhysicsComponent(self.dotPhysics1)
+        self.dotObject1.addTransformComponent(self.dotTransform1)
+        self.dotObject1.addSpriteComponent(self.dot_sprite_1)
+        # dot2
+        self.dotObject2 = engine.GameObject()
+        self.dotPhysics2 = engine.PhysicsComponent()
+        self.dotTransform2 = engine.Transform()
+        self.dotTransform2.xPos = self.xPos + 16 + 3 + 18 + 3 + 10 + 3
+        self.dotTransform2.yPos = self.yPos + 20 - 10 + self.energyBoxDist
+        self.dot_sprite_2 = engine.Sprite(self.dotTransform2, True)
+        self.dot_sprite_2.setRectangleDimensions(10, 10)
+        self.dot_sprite_2.setSpriteSheetDimensions(1200, 1200, 350, 450, 1, 1, 0)
+        self.dot_sprite_2.loadImage('Assets/spritesheets/orange_ball_transparent.png', self.sdl.getSDLRenderer())
+        self.dot_sprite_2.update(0,0,0)
+        self.dotObject2.addPhysicsComponent(self.dotPhysics2)
+        self.dotObject2.addTransformComponent(self.dotTransform2)
+        self.dotObject2.addSpriteComponent(self.dot_sprite_2)
+        # first digit
+        self.digitObject1 = engine.GameObject()
+        self.digitPhysics1 = engine.PhysicsComponent()
+        self.digitTransform1 = engine.Transform()
+        self.digitTransform1.xPos = self.xPos + 16 + 3 + 18 + 3 + 10*2 + 3*2
+        self.digitTransform1.yPos = self.yPos - 4 + self.energyBoxDist
+        self.digitObject1.addPhysicsComponent(self.digitPhysics1)
+        self.digitObject1.addTransformComponent(self.digitTransform1)
+        # second digit
+        self.digitObject2 = engine.GameObject()
+        self.digitPhysics2 = engine.PhysicsComponent()
+        self.digitTransform2 = engine.Transform()
+        self.digitTransform2.xPos = self.xPos + 16 + 3 + 18 + 3 + 10*2 + 3*2 + 15
+        self.digitTransform2.yPos = self.yPos - 4 + self.energyBoxDist
+        self.digitObject2.addPhysicsComponent(self.digitPhysics2)
+        self.digitObject2.addTransformComponent(self.digitTransform2)
+        # zero
+        self.zero_sprite_1 = engine.Sprite(self.digitTransform1, True)
+        self.zero_sprite_1.setRectangleDimensions(15, 24)
+        self.zero_sprite_1.setSpriteSheetDimensions(110, 150, 28 + 110 * 4 + 16, 222, 1, 1, 0)
+        self.zero_sprite_1.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.zero_sprite_1.update(0,0,0)
+        self.zero_sprite_2 = engine.Sprite(self.digitTransform2, True)
+        self.zero_sprite_2.setRectangleDimensions(15, 24)
+        self.zero_sprite_2.setSpriteSheetDimensions(110, 150, 28 + 110 * 4 + 16, 222, 1, 1, 0)
+        self.zero_sprite_2.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.zero_sprite_2.update(0,0,0)
+        # one
+        self.one_sprite_1 = engine.Sprite(self.digitTransform1, True)
+        self.one_sprite_1.setRectangleDimensions(15, 24)
+        self.one_sprite_1.setSpriteSheetDimensions(110, 150, 28 + 110 * 0, 40, 1, 1, 0)
+        self.one_sprite_1.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.one_sprite_1.update(0,0,0)
+        self.one_sprite_2 = engine.Sprite(self.digitTransform2, True)
+        self.one_sprite_2.setRectangleDimensions(15, 24)
+        self.one_sprite_2.setSpriteSheetDimensions(110, 150, 28 + 110 * 0, 40, 1, 1, 0)
+        self.one_sprite_2.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.one_sprite_2.update(0,0,0)
+        # two
+        self.two_sprite_1 = engine.Sprite(self.digitTransform1, True)
+        self.two_sprite_1.setRectangleDimensions(15, 24)
+        self.two_sprite_1.setSpriteSheetDimensions(110, 150, 28 + 110 * 1, 40, 1, 1, 0)
+        self.two_sprite_1.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.two_sprite_1.update(0,0,0)
+        self.two_sprite_2 = engine.Sprite(self.digitTransform2, True)
+        self.two_sprite_2.setRectangleDimensions(15, 24)
+        self.two_sprite_2.setSpriteSheetDimensions(110, 150, 28 + 110 * 1, 40, 1, 1, 0)
+        self.two_sprite_2.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.two_sprite_2.update(0,0,0)
+        # three
+        self.three_sprite_1 = engine.Sprite(self.digitTransform1, True)
+        self.three_sprite_1.setRectangleDimensions(15, 24)
+        self.three_sprite_1.setSpriteSheetDimensions(110, 150, 28 + 110 * 2 + 4, 40, 1, 1, 0)
+        self.three_sprite_1.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.three_sprite_1.update(0,0,0)
+        self.three_sprite_2 = engine.Sprite(self.digitTransform2, True)
+        self.three_sprite_2.setRectangleDimensions(15, 24)
+        self.three_sprite_2.setSpriteSheetDimensions(110, 150, 28 + 110 * 2 + 4, 40, 1, 1, 0)
+        self.three_sprite_2.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.three_sprite_2.update(0,0,0)
+        # four
+        self.four_sprite_1 = engine.Sprite(self.digitTransform1, True)
+        self.four_sprite_1.setRectangleDimensions(15, 24)
+        self.four_sprite_1.setSpriteSheetDimensions(110, 150, 28 + 110 * 3 + 5, 40, 1, 1, 0)
+        self.four_sprite_1.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.four_sprite_1.update(0,0,0)
+        self.four_sprite_2 = engine.Sprite(self.digitTransform2, True)
+        self.four_sprite_2.setRectangleDimensions(15, 24)
+        self.four_sprite_2.setSpriteSheetDimensions(110, 150, 28 + 110 * 3 + 5, 40, 1, 1, 0)
+        self.four_sprite_2.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.four_sprite_2.update(0,0,0)
+        # five
+        self.five_sprite_1 = engine.Sprite(self.digitTransform1, True)
+        self.five_sprite_1.setRectangleDimensions(15, 24)
+        self.five_sprite_1.setSpriteSheetDimensions(110, 150, 28 + 110 * 4 + 9, 40, 1, 1, 0)
+        self.five_sprite_1.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.five_sprite_1.update(0,0,0)
+        self.five_sprite_2 = engine.Sprite(self.digitTransform2, True)
+        self.five_sprite_2.setRectangleDimensions(15, 24)
+        self.five_sprite_2.setSpriteSheetDimensions(110, 150, 28 + 110 * 4 + 9, 40, 1, 1, 0)
+        self.five_sprite_2.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.five_sprite_2.update(0,0,0)
+        # six
+        self.six_sprite_1 = engine.Sprite(self.digitTransform1, True)
+        self.six_sprite_1.setRectangleDimensions(15, 24)
+        self.six_sprite_1.setSpriteSheetDimensions(110, 150, 28 + 110 * 0, 222, 1, 1, 0)
+        self.six_sprite_1.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.six_sprite_1.update(0,0,0)
+        self.six_sprite_2 = engine.Sprite(self.digitTransform2, True)
+        self.six_sprite_2.setRectangleDimensions(15, 24)
+        self.six_sprite_2.setSpriteSheetDimensions(110, 150, 28 + 110 * 0, 222, 1, 1, 0)
+        self.six_sprite_2.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.six_sprite_2.update(0,0,0)
+        # seven
+        self.seven_sprite_1 = engine.Sprite(self.digitTransform1, True)
+        self.seven_sprite_1.setRectangleDimensions(15, 24)
+        self.seven_sprite_1.setSpriteSheetDimensions(110, 150, 28 + 110 * 1 + 2, 222, 1, 1, 0)
+        self.seven_sprite_1.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.seven_sprite_1.update(0,0,0)
+        self.seven_sprite_2 = engine.Sprite(self.digitTransform2, True)
+        self.seven_sprite_2.setRectangleDimensions(15, 24)
+        self.seven_sprite_2.setSpriteSheetDimensions(110, 150, 28 + 110 * 1 + 2, 222, 1, 1, 0)
+        self.seven_sprite_2.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.seven_sprite_2.update(0,0,0)
+        # eight
+        self.eight_sprite_1 = engine.Sprite(self.digitTransform1, True)
+        self.eight_sprite_1.setRectangleDimensions(15, 24)
+        self.eight_sprite_1.setSpriteSheetDimensions(110, 150, 28 + 110 * 2 + 4, 222, 1, 1, 0)
+        self.eight_sprite_1.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.eight_sprite_1.update(0,0,0)
+        self.eight_sprite_2 = engine.Sprite(self.digitTransform2, True)
+        self.eight_sprite_2.setRectangleDimensions(15, 24)
+        self.eight_sprite_2.setSpriteSheetDimensions(110, 150, 28 + 110 * 2 + 4, 222, 1, 1, 0)
+        self.eight_sprite_2.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.eight_sprite_2.update(0,0,0)
+        # nine
+        self.nine_sprite_1 = engine.Sprite(self.digitTransform1, True)
+        self.nine_sprite_1.setRectangleDimensions(15, 24)
+        self.nine_sprite_1.setSpriteSheetDimensions(110, 150, 28 + 110 * 3 + 10, 222, 1, 1, 0)
+        self.nine_sprite_1.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.nine_sprite_1.update(0,0,0)
+        self.nine_sprite_2 = engine.Sprite(self.digitTransform2, True)
+        self.nine_sprite_2.setRectangleDimensions(15, 24)
+        self.nine_sprite_2.setSpriteSheetDimensions(110, 150, 28 + 110 * 3 + 10, 222, 1, 1, 0)
+        self.nine_sprite_2.loadImage('Assets/spritesheets/numbers_white_transparent.png', self.sdl.getSDLRenderer())
+        self.nine_sprite_2.update(0,0,0)
+
+        self.spriteArr1 = [self.zero_sprite_1, self.one_sprite_1, self.two_sprite_1, self.three_sprite_1, self.four_sprite_1,
+                           self.five_sprite_1, self.six_sprite_1, self.seven_sprite_1, self.eight_sprite_1, self.nine_sprite_1]
+        self.spriteArr2 = [self.zero_sprite_2, self.one_sprite_2, self.two_sprite_2, self.three_sprite_2, self.four_sprite_2,
+                           self.five_sprite_2, self.six_sprite_2, self.seven_sprite_2, self.eight_sprite_2, self.nine_sprite_2]
+
+        self.digitObject1.addSpriteComponent(self.zero_sprite_1)
+        self.digitObject2.addSpriteComponent(self.zero_sprite_2)
+
+    def createEnergyBoxes(self):
+        # box 1
+        self.boxObject1 = engine.GameObject()
+        self.boxPhysics1 = engine.PhysicsComponent()
+        self.boxTransform1 = engine.Transform()
+        self.boxTransform1.xPos = self.xPos
+        self.boxTransform1.yPos = self.yPos
+        self.box_sprite_1_1 = engine.Sprite(self.boxTransform1, True)
+        self.box_sprite_1_1.setRectangleDimensions(20, 16)
+        self.box_sprite_1_1.setSpriteSheetDimensions(153, 153, 370, 130, 1, 1, 0)
+        self.box_sprite_1_1.loadImage('Assets/spritesheets/energy_box_transparent.png', self.sdl.getSDLRenderer())
+        self.box_sprite_1_1.update(0,0,0)
+        self.box_sprite_1_2 = engine.Sprite(self.boxTransform1, True)
+        self.box_sprite_1_2.setRectangleDimensions(20, 16)
+        self.box_sprite_1_2.setSpriteSheetDimensions(153, 153, 130, 130, 1, 1, 0)
+        self.box_sprite_1_2.loadImage('Assets/spritesheets/energy_box_transparent.png', self.sdl.getSDLRenderer())
+        self.box_sprite_1_2.update(0,0,0)
+        self.boxObject1.addPhysicsComponent(self.boxPhysics1)
+        self.boxObject1.addTransformComponent(self.boxTransform1)
+        self.boxObject1.addSpriteComponent(self.box_sprite_1_1)
+        # box 2
+        self.boxObject2 = engine.GameObject()
+        self.boxPhysics2 = engine.PhysicsComponent()
+        self.boxTransform2 = engine.Transform()
+        self.boxTransform2.xPos = self.xPos + 20 * 1 + 6 * 1
+        self.boxTransform2.yPos = self.yPos
+        self.box_sprite_2_1 = engine.Sprite(self.boxTransform2, True)
+        self.box_sprite_2_1.setRectangleDimensions(20, 16)
+        self.box_sprite_2_1.setSpriteSheetDimensions(153, 153, 370, 130, 1, 1, 0)
+        self.box_sprite_2_1.loadImage('Assets/spritesheets/energy_box_transparent.png', self.sdl.getSDLRenderer())
+        self.box_sprite_2_1.update(0,0,0)
+        self.box_sprite_2_2 = engine.Sprite(self.boxTransform2, True)
+        self.box_sprite_2_2.setRectangleDimensions(20, 16)
+        self.box_sprite_2_2.setSpriteSheetDimensions(153, 153, 130, 130, 1, 1, 0)
+        self.box_sprite_2_2.loadImage('Assets/spritesheets/energy_box_transparent.png', self.sdl.getSDLRenderer())
+        self.box_sprite_2_2.update(0,0,0)
+        self.boxObject2.addPhysicsComponent(self.boxPhysics2)
+        self.boxObject2.addTransformComponent(self.boxTransform2)
+        self.boxObject2.addSpriteComponent(self.box_sprite_2_1)
+        # box 3
+        self.boxObject3 = engine.GameObject()
+        self.boxPhysics3 = engine.PhysicsComponent()
+        self.boxTransform3 = engine.Transform()
+        self.boxTransform3.xPos = self.xPos + 20 * 2 + 6 * 2
+        self.boxTransform3.yPos = self.yPos
+        self.box_sprite_3_1 = engine.Sprite(self.boxTransform3, True)
+        self.box_sprite_3_1.setRectangleDimensions(20, 16)
+        self.box_sprite_3_1.setSpriteSheetDimensions(153, 153, 370, 130, 1, 1, 0)
+        self.box_sprite_3_1.loadImage('Assets/spritesheets/energy_box_transparent.png', self.sdl.getSDLRenderer())
+        self.box_sprite_3_1.update(0,0,0)
+        self.box_sprite_3_2 = engine.Sprite(self.boxTransform3, True)
+        self.box_sprite_3_2.setRectangleDimensions(20, 16)
+        self.box_sprite_3_2.setSpriteSheetDimensions(153, 153, 130, 130, 1, 1, 0)
+        self.box_sprite_3_2.loadImage('Assets/spritesheets/energy_box_transparent.png', self.sdl.getSDLRenderer())
+        self.box_sprite_3_2.update(0,0,0)
+        self.boxObject3.addPhysicsComponent(self.boxPhysics3)
+        self.boxObject3.addTransformComponent(self.boxTransform3)
+        self.boxObject3.addSpriteComponent(self.box_sprite_3_1)
+        # box 4
+        self.boxObject4 = engine.GameObject()
+        self.boxPhysics4 = engine.PhysicsComponent()
+        self.boxTransform4 = engine.Transform()
+        self.boxTransform4.xPos = self.xPos + 20 * 3 + 6 * 3
+        self.boxTransform4.yPos = self.yPos
+        self.box_sprite_4_1 = engine.Sprite(self.boxTransform4, True)
+        self.box_sprite_4_1.setRectangleDimensions(20, 16)
+        self.box_sprite_4_1.setSpriteSheetDimensions(153, 153, 370, 130, 1, 1, 0)
+        self.box_sprite_4_1.loadImage('Assets/spritesheets/energy_box_transparent.png', self.sdl.getSDLRenderer())
+        self.box_sprite_4_1.update(0,0,0)
+        self.box_sprite_4_2 = engine.Sprite(self.boxTransform4, True)
+        self.box_sprite_4_2.setRectangleDimensions(20, 16)
+        self.box_sprite_4_2.setSpriteSheetDimensions(153, 153, 130, 130, 1, 1, 0)
+        self.box_sprite_4_2.loadImage('Assets/spritesheets/energy_box_transparent.png', self.sdl.getSDLRenderer())
+        self.box_sprite_4_2.update(0,0,0)
+        self.boxObject4.addPhysicsComponent(self.boxPhysics4)
+        self.boxObject4.addTransformComponent(self.boxTransform4)
+        self.boxObject4.addSpriteComponent(self.box_sprite_4_1)
+        
+        self.boxSpriteArr1 = [self.box_sprite_1_1, self.box_sprite_2_1, self.box_sprite_3_1, self.box_sprite_4_1]
+        self.boxSpriteArr2 = [self.box_sprite_1_2, self.box_sprite_2_2, self.box_sprite_3_2, self.box_sprite_4_2]
+        self.boxObjectArr = [self.boxObject1, self.boxObject2, self.boxObject3, self.boxObject4]
+
+    def renderPlayerDisplay(self):
+        #bubbleDoor.getSpriteComponent().render(self.sdl.getSDLRenderer(), leftCamera.x, leftCamera.y)
+        self.eObject.mSprite.render(self.sdl.getSDLRenderer(), 0, 0)
+        self.nObject.mSprite.render(self.sdl.getSDLRenderer(), 0, 0)
+        self.dotObject1.mSprite.render(self.sdl.getSDLRenderer(), 0, 0)
+        self.dotObject2.mSprite.render(self.sdl.getSDLRenderer(), 0, 0)
+        self.digitObject1.mSprite.render(self.sdl.getSDLRenderer(), 0, 0)
+        self.digitObject2.mSprite.render(self.sdl.getSDLRenderer(), 0, 0)
+        self.boxObject1.mSprite.render(self.sdl.getSDLRenderer(), 0, 0)
+        self.boxObject2.mSprite.render(self.sdl.getSDLRenderer(), 0, 0)
+        self.boxObject3.mSprite.render(self.sdl.getSDLRenderer(), 0, 0)
+        self.boxObject4.mSprite.render(self.sdl.getSDLRenderer(), 0, 0)
+        # self.boxObject5.mSprite.render(self.sdl.getSDLRenderer(), 0, 0)
+    def updatePlayerDisplay(self):
+        numTanks = self.hitPoints // 100
+        num = self.hitPoints % 100
+        tens = num // 10
+        ones = num % 10
+        numBoxes = len(self.boxObjectArr)
+        for i in range(numBoxes - 1, -1, -1):
+            # use numBoxes - 1 - i: because I numbered the boxes wrong
+            if i < numTanks:
+                self.boxObjectArr[numBoxes - 1 - i].addSpriteComponent(self.boxSpriteArr2[numBoxes - 1 - i])
+            else:
+                self.boxObjectArr[numBoxes - 1 - i].addSpriteComponent(self.boxSpriteArr1[numBoxes - 1 - i])
+        self.digitObject1.addSpriteComponent(self.spriteArr1[tens])
+        self.digitObject2.addSpriteComponent(self.spriteArr2[ones])
+    def addHitPoints(self, delta):
+        self.hitPoints += delta
+        if self.hitPoints > self.maxHitPoints:
+            self.hitPoints = self.maxHitPoints
+        elif self.hitPoints < 0:
+            self.hitPoints = 0
+
+
+
+class FakeTile:
+    def __init__(self, xPos, yPos, tileSize, tilemap, sdl):
+        self.tileSize = tileSize
+        self.xPos = xPos
+        self.yPos = yPos
+        self.tilemap = tilemap
+        self.sdl = sdl
+
+        self.tileObject = engine.GameObject()
+        self.tilePhysics = engine.PhysicsComponent()
+        self.tileTransform = engine.Transform()
+        self.tileTransform.xPos = self.xPos
+        self.tileTransform.yPos = self.yPos
+        # (width of sprite, height of sprite, start x, start y, max num sprites in a row, total num sprites, numPixelsToTrimFromWidth)
+        self.tile_sprite = engine.Sprite(self.tileTransform, True)
+        self.tile_sprite.setRectangleDimensions(self.tileSize, self.tileSize)
+        self.tile_sprite.setSpriteSheetDimensions(36, 36, 22, 70, 1, 1, 0)
+        self.tile_sprite.loadImage('Assets/tilesets/Metroid_Tileset_2_transparent.png', self.sdl.getSDLRenderer())
+        self.tile_sprite.update(0, 0, 0)
+        self.tileObject.addTileMapComponent(self.tilemap)
+        self.tileObject.addPhysicsComponent(self.tilePhysics)
+        self.tileObject.addTransformComponent(self.tileTransform)
+        self.tileObject.addSpriteComponent(self.tile_sprite)
+    def getTileObject(self):
+        return self.tileObject
 
 class ExplodableTile:
     def __init__(self, xPos, yPos, tileSize, tilemap, sdl):
@@ -158,6 +504,7 @@ class Zoomer:
         self.maxFrameCountArr = []
         self.curFrameCount = 0
         self.hitPoints = 4
+        self.damageValue = -5
         self.active = True
         self.origIsClockwise = isClockwise
         self.originalXPos = self.zoomerObject.mTransform.xPos
@@ -239,6 +586,8 @@ class Zoomer:
         return self.originalYPos
     def getOriginalXPos(self):
         return self.originalXPos
+    def getDamageValue(self):
+        return self.damageValue
     def checkIfColliding(self, obj):
         x1 = self.zoomerObject.mTransform.xPos
         y1 = self.zoomerObject.mTransform.yPos
@@ -265,6 +614,7 @@ class Bug:
         self.closeness = closeness
         self.jumpHeight = jumpHeight
         self.active = True
+        self.damageValue = -4
         self.waitOneCycleForJumpUpdate = True
         self.originalXPos = self.bugObject.mTransform.xPos
         self.originalYPos = self.bugObject.mTransform.yPos
@@ -312,11 +662,98 @@ class Bug:
         return self.bugObject
     def getOriginalYPos(self):
         return self.originalYPos
+    def getDamageValue(self):
+        return self.damageValue
     def checkIfColliding(self, obj):
         x1 = self.bugObject.mTransform.xPos
         y1 = self.bugObject.mTransform.yPos
         width1 = self.bugObject.mSprite.getWidth()
         height1 = self.bugObject.mSprite.getHeight()
+        x2 = obj.mTransform.xPos
+        y2 = obj.mTransform.yPos
+        width2 = obj.mSprite.getWidth()
+        height2 = obj.mSprite.getHeight()
+        if (x1 < x2 + width2 and x1 + width1 > x2 and
+                y1 < y2 + height2 and y1 + height1 > y2):
+            return True
+        return False
+    
+class Waver:
+    def __init__(self, waverObject):
+        self.waverObject = waverObject
+        self.xVelocity = 5
+        self.spriteArr = []
+        self.maxFrameCountArr = []
+        self.curFrameCount = 0
+        self.hitPoints = 4
+        self.curXDirection = 1 # 1 or -1
+        self.active = True
+        self.damageValue = -9
+        self.originalXPos = self.waverObject.mTransform.xPos
+        self.originalYPos = self.waverObject.mTransform.yPos
+        self.waverHitSound = engine.Sound()
+        self.waverHitSound.SetSound("Assets/Sounds/Metroid_sounds/Sound Effect (4).wav")
+        self.maxWallHit = 20
+        self.curWallHitCount = 0
+        self.reverseDirection = False
+    # incrementWallHitCount(), resetWallHitCount(), timeToReverseDirection()
+    def incrementWallHitCount(self):
+        self.curWallHitCount += 1
+        if self.curWallHitCount > self.maxWallHit:
+            self.reverseDirection = True
+    def resetWallHitCount(self):
+        self.reverseDirection = False
+        self.curWallHitCount = 0
+    def timeToReverseDirection(self):
+        return self.reverseDirection
+    def addSpriteToList(self, sprite, maxFrameCount):
+        self.spriteArr.append(sprite)
+        self.maxFrameCountArr.append(maxFrameCount)
+    def incrementCurrentFrameCount(self, num, maxFrameCount):
+        self.curFrameCount += num
+        if int(self.curFrameCount) > maxFrameCount:
+            self.curFrameCount = 0
+    def decreaseHitPoints(self, posNum):
+        self.hitPoints -= posNum
+        self.waverHitSound.PlaySound()
+        if self.hitPoints <= 0:
+            self.setActiveStatus(False)
+    def isActive(self):
+        return self.active
+    def setActiveStatus(self, isActive):
+        if isActive == True:
+            self.waverObject.mTransform.xPos = self.originalXPos
+            self.waverObject.mTransform.yPos = self.originalYPos
+            self.waverObject.mSineWaveComponent.restartSineWave(self.waverObject)
+            if self.waverObject.mSineWaveComponent.isTravelingRight():
+                self.setCurrentSprite(0)
+            else:
+                self.setCurrentSprite(1)
+            self.hitPoints = 4
+            self.active = True
+        else:
+            self.active = False
+    def setCurrentSprite(self, idx):
+        self.waverObject.addSpriteComponent(self.spriteArr[idx])
+    def getCurrentFrameCount(self):
+        return self.curFrameCount
+    def getMaxFrameCount(self, idx):
+        return self.maxFrameCountArr[idx]
+    def getWaverObject(self):
+        return self.waverObject
+    def getOriginalXPos(self):
+        return self.originalXPos
+    def getOriginalYPos(self):
+        return self.originalYPos
+    def getXVelocity(self):
+        return self.xVelocity
+    def getDamageValue(self):
+        return self.damageValue
+    def checkIfColliding(self, obj):
+        x1 = self.waverObject.mTransform.xPos
+        y1 = self.waverObject.mTransform.yPos
+        width1 = self.waverObject.mSprite.getWidth()
+        height1 = self.waverObject.mSprite.getHeight()
         x2 = obj.mTransform.xPos
         y2 = obj.mTransform.yPos
         width2 = obj.mSprite.getWidth()
@@ -647,6 +1084,8 @@ class PlayerState:
 class Game:
     # Initialize Game
     def __init__(self, windowWidth, windowHeight):
+        # randomArr is a catchall for everything that needs permanent storage
+        self.randomArr = []
         # SDL Setup
         self.sdl = engine.SDLGraphicsProgram(windowWidth, windowHeight)
         self.windowWidth = windowWidth # self.tileSize * 27 = 972
@@ -660,20 +1099,24 @@ class Game:
         self.tilemap3.loadTileset("Assets/tilesets/Metroid_Tileset_2.bmp", self.sdl.getSDLRenderer())
         self.tilemap4 = engine.TileMapComponent("Assets/Levels/BrinstarTiles/metroid_practice_4.lvl", 21, 70)
         self.tilemap4.loadTileset("Assets/tilesets/Metroid_Tileset_2.bmp", self.sdl.getSDLRenderer())
+        self.tilemap5 = engine.TileMapComponent("Assets/Levels/BrinstarTiles/metroid_practice_5.lvl", 21, 70)
+        self.tilemap5.loadTileset("Assets/tilesets/Metroid_Tileset_2.bmp", self.sdl.getSDLRenderer())
         # tilemap side or vertical dict
         self.sideOrVertDict = {}
         self.sideOrVertDict[str(self.tilemap1)] = "horizontal"
         self.sideOrVertDict[str(self.tilemap2)] = "horizontal"
         self.sideOrVertDict[str(self.tilemap3)] = "vertical"
         self.sideOrVertDict[str(self.tilemap4)] = "horizontal"
+        self.sideOrVertDict[str(self.tilemap5)] = "horizontal"
         # tilemap adjacency dict
         self.tilemapAdjacencyDict = {}
         self.tilemapAdjacencyDict[str(self.tilemap1)] = {"left1": None, "right1": self.tilemap2}
         self.tilemapAdjacencyDict[str(self.tilemap2)] = {"left1": self.tilemap1, "right1": self.tilemap3}
-        self.tilemapAdjacencyDict[str(self.tilemap3)] = {"left1": self.tilemap2, "right1": self.tilemap4}
+        self.tilemapAdjacencyDict[str(self.tilemap3)] = {"left1": self.tilemap2, "left2": self.tilemap5, "right1": self.tilemap4}
         self.tilemapAdjacencyDict[str(self.tilemap4)] = {"left1": self.tilemap3, "right1": None}
+        self.tilemapAdjacencyDict[str(self.tilemap5)] = {"left1": None, "right1": self.tilemap3}
         # set self.tilemap
-        self.tilemap = self.tilemap1 # TODO: switch back to tilemap1
+        self.tilemap = self.tilemap4 # TODO: switch back to tilemap1
         self.tileSize = self.tilemap.getSize() # 36
 
         # Level size
@@ -686,7 +1129,7 @@ class Game:
 
         # Player Object Setup
         self.player = engine.GameObject()
-        self.playerStartXPos = 200
+        self.playerStartXPos = 200 # TODO: change back to 200
         # self.playerStartXPos = self.tilemap.getCols() * self.tileSize - (self.tileSize * 8)
         # self.playerStartYPos = self.tilemap3.getRows() * self.tileSize - 500 - (self.tileSize * 14)
         self.playerStartYPos = self.tilemap.getRows() * self.tileSize - (self.tileSize * 3) - 50
@@ -717,13 +1160,18 @@ class Game:
         self.lvlWidth3 = self.tilemap3.getCols() * self.tileSize
         self.lvlWidth4 = self.tilemap4.getCols() * self.tileSize
         self.lvlHeight4 = self.tilemap4.getRows() * self.tileSize
+        self.lvlWidth5 = self.tilemap5.getCols() * self.tileSize
+        self.lvlHeight5 = self.tilemap5.getRows() * self.tileSize
         # Door objects
         self.createDoorObjects()
         # Bubble Doors
         self.createBubbleDoorObjects()
         # Dictionary containing all monsters for level
         self.enemiesDict = {}
+        self.enemiesDict[str(self.tilemap5)] = {}
         
+        # Wavers
+        self.createWavers()
         # Flying monsters(bugs)
         self.createBugs()
         # Zoomers
@@ -732,6 +1180,11 @@ class Game:
         self.createPowerUpObjects()
         # explodable tiles
         self.createExplodableTiles()
+        # fake tiles
+        self.createFakeTiles()
+
+        # Player Display
+        self.playerDisplay = PlayerDisplay(self.sdl)
 
         # Camera Setup
         self.camera = engine.SpriteSideScrollerCamera(self.windowWidth, self.windowHeight, self.lvlWidth, 
@@ -820,13 +1273,14 @@ class Game:
 
         # Energy Orbs
         self.energyOrbArr = []
-        # self.createEnergyOrb(300, self.tilemap.getRows() * self.tileSize - (self.tileSize * 3) - 50)
+        self.energyOrbValue = 4
 
         # Game Variables
         self.player.xVel = self.playerRunSpeed
         self.player.yVel = self.playerFallingSpeed
         self.bugFrameIncrement = 0.33334
         self.zoomerFrameIncrement = 0.25
+        self.waverFrameIncrement = 0.1
         
         # Frame capping variables
         targetFPS = 40 # TODO: set back to 40
@@ -1271,6 +1725,99 @@ class Game:
 
         self.doorObjectsDict[str(self.tilemap4)] = [self.doorObject16, self.doorObject17, self.doorObject18]
 
+        # for tilemap3: top left
+        self.doorObject19 = engine.GameObject()
+        self.doorPhysics19 = engine.PhysicsComponent()
+        self.doorTransform19 = engine.Transform()
+        self.doorTransform19.xPos = 0
+        self.doorTransform19.yPos = self.tileSize * 7
+        self.door_block_sprite19 = engine.Sprite(self.doorTransform19, True)
+        self.door_block_sprite19.setRectangleDimensions(self.tileSize, self.tileSize)
+        self.door_block_sprite19.setSpriteSheetDimensions(34, 32, 299, 303, 1, 1, 0)
+        self.door_block_sprite19.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.doorObject19.addTileMapComponent(self.tilemap3)
+        self.doorObject19.addPhysicsComponent(self.doorPhysics19)
+        self.doorObject19.addTransformComponent(self.doorTransform19)
+        self.doorObject19.addSpriteComponent(self.door_block_sprite19)
+
+        self.doorObject20 = engine.GameObject()
+        self.doorPhysics20 = engine.PhysicsComponent()
+        self.doorTransform20 = engine.Transform()
+        self.doorTransform20.xPos = 0
+        self.doorTransform20.yPos = self.tileSize * 8
+        self.door_block_sprite20 = engine.Sprite(self.doorTransform20, True)
+        self.door_block_sprite20.setRectangleDimensions(self.tileSize, self.tileSize)
+        self.door_block_sprite20.setSpriteSheetDimensions(34, 32, 299, 303, 1, 1, 0)
+        self.door_block_sprite20.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.doorObject20.addTileMapComponent(self.tilemap3)
+        self.doorObject20.addPhysicsComponent(self.doorPhysics20)
+        self.doorObject20.addTransformComponent(self.doorTransform20)
+        self.doorObject20.addSpriteComponent(self.door_block_sprite20)
+
+        self.doorObject21 = engine.GameObject()
+        self.doorPhysics21 = engine.PhysicsComponent()
+        self.doorTransform21 = engine.Transform()
+        self.doorTransform21.xPos = 0
+        self.doorTransform21.yPos = self.tileSize * 9
+        self.door_block_sprite21 = engine.Sprite(self.doorTransform21, True)
+        self.door_block_sprite21.setRectangleDimensions(self.tileSize, self.tileSize)
+        self.door_block_sprite21.setSpriteSheetDimensions(34, 32, 299, 303, 1, 1, 0)
+        self.door_block_sprite21.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.doorObject21.addTileMapComponent(self.tilemap3)
+        self.doorObject21.addPhysicsComponent(self.doorPhysics21)
+        self.doorObject21.addTransformComponent(self.doorTransform21)
+        self.doorObject21.addSpriteComponent(self.door_block_sprite21)
+
+        # append door object to tilemap3 (upper left)
+        self.doorObjectsDict[str(self.tilemap3)].append(self.doorObject19)
+        self.doorObjectsDict[str(self.tilemap3)].append(self.doorObject20)
+        self.doorObjectsDict[str(self.tilemap3)].append(self.doorObject21)
+
+        # tilemap5: left
+        self.doorObject22 = engine.GameObject()
+        self.doorPhysics22 = engine.PhysicsComponent()
+        self.doorTransform22 = engine.Transform()
+        self.doorTransform22.xPos = self.lvlWidth5 - self.tileSize + 1
+        self.doorTransform22.yPos = self.tileSize * 7
+        self.door_block_sprite22 = engine.Sprite(self.doorTransform22, True)
+        self.door_block_sprite22.setRectangleDimensions(self.tileSize, self.tileSize)
+        self.door_block_sprite22.setSpriteSheetDimensions(34, 32, 299, 303, 1, 1, 0)
+        self.door_block_sprite22.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.doorObject22.addTileMapComponent(self.tilemap5)
+        self.doorObject22.addPhysicsComponent(self.doorPhysics22)
+        self.doorObject22.addTransformComponent(self.doorTransform22)
+        self.doorObject22.addSpriteComponent(self.door_block_sprite22)
+
+        self.doorObject23 = engine.GameObject()
+        self.doorPhysics23 = engine.PhysicsComponent()
+        self.doorTransform23 = engine.Transform()
+        self.doorTransform23.xPos = self.lvlWidth5 - self.tileSize + 1
+        self.doorTransform23.yPos = self.tileSize * 8
+        self.door_block_sprite23 = engine.Sprite(self.doorTransform23, True)
+        self.door_block_sprite23.setRectangleDimensions(self.tileSize, self.tileSize)
+        self.door_block_sprite23.setSpriteSheetDimensions(34, 32, 299, 303, 1, 1, 0)
+        self.door_block_sprite23.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.doorObject23.addTileMapComponent(self.tilemap5)
+        self.doorObject23.addPhysicsComponent(self.doorPhysics23)
+        self.doorObject23.addTransformComponent(self.doorTransform23)
+        self.doorObject23.addSpriteComponent(self.door_block_sprite23)
+
+        self.doorObject24 = engine.GameObject()
+        self.doorPhysics24 = engine.PhysicsComponent()
+        self.doorTransform24 = engine.Transform()
+        self.doorTransform24.xPos = self.lvlWidth5 - self.tileSize + 1
+        self.doorTransform24.yPos = self.tileSize * 9
+        self.door_block_sprite24 = engine.Sprite(self.doorTransform24, True)
+        self.door_block_sprite24.setRectangleDimensions(self.tileSize, self.tileSize)
+        self.door_block_sprite24.setSpriteSheetDimensions(34, 32, 299, 303, 1, 1, 0)
+        self.door_block_sprite24.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.doorObject24.addTileMapComponent(self.tilemap5)
+        self.doorObject24.addPhysicsComponent(self.doorPhysics24)
+        self.doorObject24.addTransformComponent(self.doorTransform24)
+        self.doorObject24.addSpriteComponent(self.door_block_sprite24)
+
+        self.doorObjectsDict[str(self.tilemap5)] = [self.doorObject22, self.doorObject23, self.doorObject24]
+
     def createBubbleDoorObjects(self):
         self.bubbleDoorDict = {}
 
@@ -1384,6 +1931,44 @@ class Game:
         self.bubbleDoor6.setCurrentSpriteComponent(0)
         self.bubbleDoorDict[str(self.tilemap4)] = [self.bubbleDoor6]
 
+        # for tilemap3: upper left
+        self.bubbleDoor7 = BubbleDoor(self.tileSize, self.tileSize * 7, 
+                                      24, self.tileSize * 3, False)
+        self.bubbleTransform7 = engine.Transform()
+        self.bubbleTransform7.xPos = self.tileSize
+        self.bubbleTransform7.yPos = self.tileSize * 7
+        self.bubble_sprite7_1 = engine.Sprite(self.bubbleTransform7, True)
+        self.bubble_sprite7_1.setRectangleDimensions(24, self.tileSize * 3)
+        self.bubble_sprite7_1.setSpriteSheetDimensions(19, 97, 1140, 600, 1, 1, 0)
+        self.bubble_sprite7_1.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.bubbleDoor7.addSpriteComponent(self.bubble_sprite7_1, 0)
+        self.bubble_sprite7_2 = engine.Sprite(self.bubbleTransform7, True)
+        self.bubble_sprite7_2.setRectangleDimensions(24, self.tileSize * 3)
+        self.bubble_sprite7_2.setSpriteSheetDimensions(19, 97, 1177, 600, 1, 1, 0)
+        self.bubble_sprite7_2.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.bubbleDoor7.addSpriteComponent(self.bubble_sprite7_2, 1)
+        self.bubbleDoor7.setCurrentSpriteComponent(0)
+        self.bubbleDoorDict[str(self.tilemap3)].append(self.bubbleDoor7)
+
+        # for tilemap5: right
+        self.bubbleDoor8 = BubbleDoor(self.lvlWidth5 - self.tileSize - 24, self.tileSize * 7, 
+                                      24, self.tileSize * 3, True)
+        self.bubbleTransform8 = engine.Transform()
+        self.bubbleTransform8.xPos = self.lvlWidth5 - self.tileSize - 24
+        self.bubbleTransform8.yPos = self.tileSize * 7
+        self.bubble_sprite8_1 = engine.Sprite(self.bubbleTransform8, False)
+        self.bubble_sprite8_1.setRectangleDimensions(24, self.tileSize * 3)
+        self.bubble_sprite8_1.setSpriteSheetDimensions(19, 97, 1136, 600, 1, 1, 0)
+        self.bubble_sprite8_1.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.bubbleDoor8.addSpriteComponent(self.bubble_sprite8_1, 0)
+        self.bubble_sprite8_2 = engine.Sprite(self.bubbleTransform8, False)
+        self.bubble_sprite8_2.setRectangleDimensions(24, self.tileSize * 3)
+        self.bubble_sprite8_2.setSpriteSheetDimensions(19, 97, 1099, 600, 1, 1, 0)
+        self.bubble_sprite8_2.loadImage('Assets/tilesets/Metroid_Tileset_2.bmp', self.sdl.getSDLRenderer())
+        self.bubbleDoor8.addSpriteComponent(self.bubble_sprite8_2, 1)
+        self.bubbleDoor8.setCurrentSpriteComponent(0)
+        self.bubbleDoorDict[str(self.tilemap5)] = [self.bubbleDoor8]
+
         self.whichDoorToOpenDict = {}
         self.whichDoorToOpenDict[str(self.tilemap1) + str(self.tilemap2)] = self.bubbleDoor2
         self.whichDoorToOpenDict[str(self.tilemap2) + str(self.tilemap1)] = self.bubbleDoor1
@@ -1391,6 +1976,8 @@ class Game:
         self.whichDoorToOpenDict[str(self.tilemap3) + str(self.tilemap2)] = self.bubbleDoor3
         self.whichDoorToOpenDict[str(self.tilemap3) + str(self.tilemap4)] = self.bubbleDoor6
         self.whichDoorToOpenDict[str(self.tilemap4) + str(self.tilemap3)] = self.bubbleDoor5
+        self.whichDoorToOpenDict[str(self.tilemap5) + str(self.tilemap3)] = self.bubbleDoor7
+        self.whichDoorToOpenDict[str(self.tilemap3) + str(self.tilemap5)] = self.bubbleDoor8
 
         self.whichDoorToCloseDict = {}
         self.whichDoorToCloseDict[str(self.tilemap1) + str(self.tilemap2)] = self.bubbleDoor1
@@ -1399,6 +1986,164 @@ class Game:
         self.whichDoorToCloseDict[str(self.tilemap3) + str(self.tilemap2)] = self.bubbleDoor4
         self.whichDoorToCloseDict[str(self.tilemap3) + str(self.tilemap4)] = self.bubbleDoor5
         self.whichDoorToCloseDict[str(self.tilemap4) + str(self.tilemap3)] = self.bubbleDoor6
+        # TODO: change this to correct doors
+        self.whichDoorToCloseDict[str(self.tilemap5) + str(self.tilemap3)] = self.bubbleDoor8
+        self.whichDoorToCloseDict[str(self.tilemap3) + str(self.tilemap5)] = self.bubbleDoor7
+
+    def createWavers(self):
+        self.WaverArray = []
+
+        for i in range(0, 12):
+            waverObject1 = engine.GameObject()
+            waverPhysics1 = engine.PhysicsComponent()
+            waverTransform1 = engine.Transform()
+            xStartPoint = 2100 + 500 * i
+            #double _amplitude, double _sine_length, int _x, int _y, bool _isTravelingRight
+            waverSineWave1 = engine.SineWaveComponent(100.0, 400.0, xStartPoint, 510, True)
+            waverTransform1.xPos = xStartPoint
+            waverTransform1.yPos = 510
+            waver_sprite_1_1 = engine.Sprite(waverTransform1, True)
+            waver_sprite_1_1.setRectangleDimensions(40, 36)
+            #int frameWidth, int frameHeight, int startX, int startY, int numSpritesInRow, unsigned int totalSprites, unsigned int numPixelsToTrimFromWidth
+            waver_sprite_1_1.setSpriteSheetDimensions(18, 16, 413, 60, 3, 3, 2)
+            waver_sprite_1_1.loadImage('Assets/spritesheets/MetroidEnemies&BossesSpritesheet_flipped.png', self.sdl.getSDLRenderer())
+            waver_sprite_1_2 = engine.Sprite(waverTransform1, False)
+            waver_sprite_1_2.setRectangleDimensions(40, 36)
+            waver_sprite_1_2.setSpriteSheetDimensions(18, 16, 148, 60, 3, 3, 2)
+            waver_sprite_1_2.loadImage('Assets/spritesheets/MetroidEnemies&BossesSpritesheet.png', self.sdl.getSDLRenderer())
+            waverObject1.addTileMapComponent(self.tilemap5)
+            waverObject1.addPhysicsComponent(waverPhysics1)
+            waverObject1.addTransformComponent(waverTransform1)
+            waverObject1.addSpriteComponent(waver_sprite_1_1)
+            waverObject1.addSineWaveComponent(waverSineWave1)
+            waver1 = Waver(waverObject1)
+            waver1.addSpriteToList(waver_sprite_1_1, 2)
+            waver1.addSpriteToList(waver_sprite_1_2, 2)
+            waver1.setActiveStatus(True)
+            waver1.setCurrentSprite(0)
+
+            waverObject2 = engine.GameObject()
+            waverPhysics2 = engine.PhysicsComponent()
+            waverTransform2 = engine.Transform()
+            xStartPoint = 2100 + 100 + 500 * i
+            #double _amplitude, double _sine_length, int _x, int _y, bool _isTravelingRight
+            waverSineWave2 = engine.SineWaveComponent(100.0, 400.0, xStartPoint, 510, False)
+            waverTransform2.xPos = xStartPoint
+            waverTransform2.yPos = 510
+            waver_sprite_2_1 = engine.Sprite(waverTransform2, True)
+            waver_sprite_2_1.setRectangleDimensions(40, 36)
+            #int frameWidth, int frameHeight, int startX, int startY, int numSpritesInRow, unsigned int totalSprites, unsigned int numPixelsToTrimFromWidth
+            waver_sprite_2_1.setSpriteSheetDimensions(18, 16, 413, 60, 3, 3, 2)
+            waver_sprite_2_1.loadImage('Assets/spritesheets/MetroidEnemies&BossesSpritesheet_flipped.png', self.sdl.getSDLRenderer())
+            waver_sprite_2_2 = engine.Sprite(waverTransform2, False)
+            waver_sprite_2_2.setRectangleDimensions(40, 36)
+            waver_sprite_2_2.setSpriteSheetDimensions(18, 16, 148, 60, 3, 3, 2)
+            waver_sprite_2_2.loadImage('Assets/spritesheets/MetroidEnemies&BossesSpritesheet.png', self.sdl.getSDLRenderer())
+            waverObject2.addTileMapComponent(self.tilemap5)
+            waverObject2.addPhysicsComponent(waverPhysics2)
+            waverObject2.addTransformComponent(waverTransform2)
+            waverObject2.addSpriteComponent(waver_sprite_2_1)
+            waverObject2.addSineWaveComponent(waverSineWave2)
+            waver2 = Waver(waverObject2)
+            waver2.addSpriteToList(waver_sprite_2_1, 2)
+            waver2.addSpriteToList(waver_sprite_2_2, 2)
+            waver2.setActiveStatus(True)
+            waver2.setCurrentSprite(1)
+
+            self.randomArr.append(waverObject1)
+            self.randomArr.append(waverPhysics1)
+            self.randomArr.append(waverTransform1)
+            self.randomArr.append(waverSineWave1)
+            self.randomArr.append(waver_sprite_1_1)
+            self.randomArr.append(waver_sprite_1_2)
+            self.randomArr.append(waverObject2)
+            self.randomArr.append(waverPhysics2)
+            self.randomArr.append(waverTransform2)
+            self.randomArr.append(waverSineWave2)
+            self.randomArr.append(waver_sprite_2_1)
+            self.randomArr.append(waver_sprite_2_2)
+
+            self.WaverArray.append(waver1)
+            self.WaverArray.append(waver2)
+
+        # green wavers
+        for i in range(0, 12):
+            waverObject1 = engine.GameObject()
+            waverPhysics1 = engine.PhysicsComponent()
+            waverTransform1 = engine.Transform()
+            xStartPoint = 2100 + 200 + 500 * i
+            yStartPoint = 400
+            #double _amplitude, double _sine_length, int _x, int _y, bool _isTravelingRight
+            waverSineWave1 = engine.SineWaveComponent(100.0, 400.0, xStartPoint, yStartPoint, True)
+            waverTransform1.xPos = xStartPoint
+            waverTransform1.yPos = yStartPoint
+            waver_sprite_1_1 = engine.Sprite(waverTransform1, True)
+            waver_sprite_1_1.setRectangleDimensions(40, 36)
+            #int frameWidth, int frameHeight, int startX, int startY, int numSpritesInRow, unsigned int totalSprites, unsigned int numPixelsToTrimFromWidth
+            waver_sprite_1_1.setSpriteSheetDimensions(18, 16, 467, 60, 3, 3, 2)
+            waver_sprite_1_1.loadImage('Assets/spritesheets/MetroidEnemies&BossesSpritesheet_flipped.png', self.sdl.getSDLRenderer())
+            waver_sprite_1_2 = engine.Sprite(waverTransform1, False)
+            waver_sprite_1_2.setRectangleDimensions(40, 36)
+            waver_sprite_1_2.setSpriteSheetDimensions(18, 16, 94, 60, 3, 3, 2)
+            waver_sprite_1_2.loadImage('Assets/spritesheets/MetroidEnemies&BossesSpritesheet.png', self.sdl.getSDLRenderer())
+            waverObject1.addTileMapComponent(self.tilemap5)
+            waverObject1.addPhysicsComponent(waverPhysics1)
+            waverObject1.addTransformComponent(waverTransform1)
+            waverObject1.addSpriteComponent(waver_sprite_1_1)
+            waverObject1.addSineWaveComponent(waverSineWave1)
+            waver1 = Waver(waverObject1)
+            waver1.addSpriteToList(waver_sprite_1_1, 2)
+            waver1.addSpriteToList(waver_sprite_1_2, 2)
+            waver1.setActiveStatus(True)
+            waver1.setCurrentSprite(0)
+
+            waverObject2 = engine.GameObject()
+            waverPhysics2 = engine.PhysicsComponent()
+            waverTransform2 = engine.Transform()
+            xStartPoint = 2100 + 200 + 100 + 500 * i
+            yStartPoint = 400
+            #double _amplitude, double _sine_length, int _x, int _y, bool _isTravelingRight
+            waverSineWave2 = engine.SineWaveComponent(100.0, 400.0, xStartPoint, yStartPoint, False)
+            waverTransform2.xPos = xStartPoint
+            waverTransform2.yPos = yStartPoint
+            waver_sprite_2_1 = engine.Sprite(waverTransform2, True)
+            waver_sprite_2_1.setRectangleDimensions(40, 36)
+            #int frameWidth, int frameHeight, int startX, int startY, int numSpritesInRow, unsigned int totalSprites, unsigned int numPixelsToTrimFromWidth
+            waver_sprite_2_1.setSpriteSheetDimensions(18, 16, 467, 60, 3, 3, 2)
+            waver_sprite_2_1.loadImage('Assets/spritesheets/MetroidEnemies&BossesSpritesheet_flipped.png', self.sdl.getSDLRenderer())
+            waver_sprite_2_2 = engine.Sprite(waverTransform2, False)
+            waver_sprite_2_2.setRectangleDimensions(40, 36)
+            waver_sprite_2_2.setSpriteSheetDimensions(18, 16, 94, 60, 3, 3, 2)
+            waver_sprite_2_2.loadImage('Assets/spritesheets/MetroidEnemies&BossesSpritesheet.png', self.sdl.getSDLRenderer())
+            waverObject2.addTileMapComponent(self.tilemap5)
+            waverObject2.addPhysicsComponent(waverPhysics2)
+            waverObject2.addTransformComponent(waverTransform2)
+            waverObject2.addSpriteComponent(waver_sprite_2_1)
+            waverObject2.addSineWaveComponent(waverSineWave2)
+            waver2 = Waver(waverObject2)
+            waver2.addSpriteToList(waver_sprite_2_1, 2)
+            waver2.addSpriteToList(waver_sprite_2_2, 2)
+            waver2.setActiveStatus(True)
+            waver2.setCurrentSprite(1)
+
+            self.randomArr.append(waverObject1)
+            self.randomArr.append(waverPhysics1)
+            self.randomArr.append(waverTransform1)
+            self.randomArr.append(waverSineWave1)
+            self.randomArr.append(waver_sprite_1_1)
+            self.randomArr.append(waver_sprite_1_2)
+            self.randomArr.append(waverObject2)
+            self.randomArr.append(waverPhysics2)
+            self.randomArr.append(waverTransform2)
+            self.randomArr.append(waverSineWave2)
+            self.randomArr.append(waver_sprite_2_1)
+            self.randomArr.append(waver_sprite_2_2)
+
+            self.WaverArray.append(waver1)
+            self.WaverArray.append(waver2)
+
+        # TODO: change this to append if necessary....
+        self.enemiesDict[str(self.tilemap5)]["waverArray"] = self.WaverArray
 
     def createBugs(self):
         self.bugObject1 = engine.GameObject()
@@ -2706,6 +3451,182 @@ class Game:
         self.enemiesDict[str(self.tilemap3)] = {"zoomerArray": self.zoomerArray}
         self.enemiesDict[str(self.tilemap1)] = {"zoomerArray": [self.zoomer33]}
 
+        self.enemiesDict[str(self.tilemap5)]["zoomerArray"] = []
+
+        for i in range(0, 6):
+            zoomerObject1 = engine.GameObject()
+            zoomerPhysics1 = engine.PhysicsComponent()
+            zoomerTransform1 = engine.Transform()
+            zoomerTransform1.xPos = 2200 + 980 * i
+            zoomerTransform1.yPos = (self.tileSize * 7) - self.zoomerSize
+            zoomer_sprite_1_1 = engine.Sprite(zoomerTransform1, True)
+            zoomer_sprite_1_1.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 40, 36
+            zoomer_sprite_1_1.setSpriteSheetDimensions(18, 14, 8, 7, 2, 2, 0)
+            zoomer_sprite_1_1.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+            zoomer_sprite_1_2 = engine.Sprite(zoomerTransform1, True)
+            zoomer_sprite_1_2.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 36, 40
+            zoomer_sprite_1_2.setSpriteSheetDimensions(16, 18, 44, 4, 2, 2, 1)
+            zoomer_sprite_1_2.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+            zoomer_sprite_1_3 = engine.Sprite(zoomerTransform1, True)
+            zoomer_sprite_1_3.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 40, 36
+            zoomer_sprite_1_3.setSpriteSheetDimensions(18, 14, 76, 7, 2, 2, 0)
+            zoomer_sprite_1_3.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+            zoomer_sprite_1_4 = engine.Sprite(zoomerTransform1, True)
+            zoomer_sprite_1_4.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 36, 40
+            zoomer_sprite_1_4.setSpriteSheetDimensions(16, 18, 112, 4, 2, 2, 1)
+            zoomer_sprite_1_4.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+            zoomerObject1.addTileMapComponent(self.tilemap5)
+            zoomerObject1.addPhysicsComponent(zoomerPhysics1)
+            zoomerObject1.addTransformComponent(zoomerTransform1)
+            zoomerObject1.addSpriteComponent(zoomer_sprite_1_1)
+            zoomer1 = Zoomer(zoomerObject1, 0, True)
+            zoomer1.addSpriteToList(zoomer_sprite_1_1, 1)
+            zoomer1.addSpriteToList(zoomer_sprite_1_2, 1)
+            zoomer1.addSpriteToList(zoomer_sprite_1_3, 1)
+            zoomer1.addSpriteToList(zoomer_sprite_1_4, 1)
+            zoomer1.setActiveStatus(True)
+            zoomerObject1.xVel = zoomer1.getCurrentXVelocity()
+            zoomerObject1.yVel = zoomer1.getCurrentYVelocity()
+
+            zoomerObject2 = engine.GameObject()
+            zoomerPhysics2 = engine.PhysicsComponent()
+            zoomerTransform2 = engine.Transform()
+            zoomerTransform2.xPos = 2200 + 400 + 980 * i
+            zoomerTransform2.yPos = (self.tileSize * 8) - self.zoomerSize
+            zoomer_sprite_2_1 = engine.Sprite(zoomerTransform2, True)
+            zoomer_sprite_2_1.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 40, 36
+            zoomer_sprite_2_1.setSpriteSheetDimensions(18, 14, 8, 7, 2, 2, 0)
+            zoomer_sprite_2_1.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+            zoomer_sprite_2_2 = engine.Sprite(zoomerTransform2, True)
+            zoomer_sprite_2_2.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 36, 40
+            zoomer_sprite_2_2.setSpriteSheetDimensions(16, 18, 44, 4, 2, 2, 1)
+            zoomer_sprite_2_2.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+            zoomer_sprite_2_3 = engine.Sprite(zoomerTransform2, True)
+            zoomer_sprite_2_3.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 40, 36
+            zoomer_sprite_2_3.setSpriteSheetDimensions(18, 14, 76, 7, 2, 2, 0)
+            zoomer_sprite_2_3.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+            zoomer_sprite_2_4 = engine.Sprite(zoomerTransform2, True)
+            zoomer_sprite_2_4.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 36, 40
+            zoomer_sprite_2_4.setSpriteSheetDimensions(16, 18, 112, 4, 2, 2, 1)
+            zoomer_sprite_2_4.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+            zoomerObject2.addTileMapComponent(self.tilemap5)
+            zoomerObject2.addPhysicsComponent(zoomerPhysics2)
+            zoomerObject2.addTransformComponent(zoomerTransform2)
+            zoomerObject2.addSpriteComponent(zoomer_sprite_2_1)
+            zoomer2 = Zoomer(zoomerObject2, 0, True)
+            zoomer2.addSpriteToList(zoomer_sprite_2_1, 1)
+            zoomer2.addSpriteToList(zoomer_sprite_2_2, 1)
+            zoomer2.addSpriteToList(zoomer_sprite_2_3, 1)
+            zoomer2.addSpriteToList(zoomer_sprite_2_4, 1)
+            zoomer2.setActiveStatus(True)
+            zoomerObject2.xVel = zoomer2.getCurrentXVelocity()
+            zoomerObject2.yVel = zoomer2.getCurrentYVelocity()
+
+            self.randomArr.append(zoomerObject1)
+            self.randomArr.append(zoomerPhysics1)
+            self.randomArr.append(zoomerTransform1)
+            self.randomArr.append(zoomer_sprite_1_1)
+            self.randomArr.append(zoomer_sprite_1_2)
+            self.randomArr.append(zoomer_sprite_1_3)
+            self.randomArr.append(zoomer_sprite_1_4)
+            self.randomArr.append(zoomerObject2)
+            self.randomArr.append(zoomerPhysics2)
+            self.randomArr.append(zoomerTransform2)
+            self.randomArr.append(zoomer_sprite_2_1)
+            self.randomArr.append(zoomer_sprite_2_2)
+            self.randomArr.append(zoomer_sprite_2_3)
+            self.randomArr.append(zoomer_sprite_2_4)
+
+            self.enemiesDict[str(self.tilemap5)]["zoomerArray"].append(zoomer1)
+            self.enemiesDict[str(self.tilemap5)]["zoomerArray"].append(zoomer2)
+
+        # zoomers at far left of tilemap5
+        zoomerObject1 = engine.GameObject()
+        zoomerPhysics1 = engine.PhysicsComponent()
+        zoomerTransform1 = engine.Transform()
+        zoomerTransform1.xPos = 500
+        zoomerTransform1.yPos = (self.tileSize * 8) - self.zoomerSize
+        zoomer_sprite_1_1 = engine.Sprite(zoomerTransform1, True)
+        zoomer_sprite_1_1.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 40, 36
+        zoomer_sprite_1_1.setSpriteSheetDimensions(18, 14, 8, 7, 2, 2, 0)
+        zoomer_sprite_1_1.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+        zoomer_sprite_1_2 = engine.Sprite(zoomerTransform1, True)
+        zoomer_sprite_1_2.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 36, 40
+        zoomer_sprite_1_2.setSpriteSheetDimensions(16, 18, 44, 4, 2, 2, 1)
+        zoomer_sprite_1_2.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+        zoomer_sprite_1_3 = engine.Sprite(zoomerTransform1, True)
+        zoomer_sprite_1_3.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 40, 36
+        zoomer_sprite_1_3.setSpriteSheetDimensions(18, 14, 76, 7, 2, 2, 0)
+        zoomer_sprite_1_3.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+        zoomer_sprite_1_4 = engine.Sprite(zoomerTransform1, True)
+        zoomer_sprite_1_4.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 36, 40
+        zoomer_sprite_1_4.setSpriteSheetDimensions(16, 18, 112, 4, 2, 2, 1)
+        zoomer_sprite_1_4.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+        zoomerObject1.addTileMapComponent(self.tilemap5)
+        zoomerObject1.addPhysicsComponent(zoomerPhysics1)
+        zoomerObject1.addTransformComponent(zoomerTransform1)
+        zoomerObject1.addSpriteComponent(zoomer_sprite_1_1)
+        zoomer1 = Zoomer(zoomerObject1, 0, True)
+        zoomer1.addSpriteToList(zoomer_sprite_1_1, 1)
+        zoomer1.addSpriteToList(zoomer_sprite_1_2, 1)
+        zoomer1.addSpriteToList(zoomer_sprite_1_3, 1)
+        zoomer1.addSpriteToList(zoomer_sprite_1_4, 1)
+        zoomer1.setActiveStatus(True)
+        zoomerObject1.xVel = zoomer1.getCurrentXVelocity()
+        zoomerObject1.yVel = zoomer1.getCurrentYVelocity()
+
+        zoomerObject2 = engine.GameObject()
+        zoomerPhysics2 = engine.PhysicsComponent()
+        zoomerTransform2 = engine.Transform()
+        zoomerTransform2.xPos = 500 + 300
+        zoomerTransform2.yPos = (self.tileSize * 9) - self.zoomerSize
+        zoomer_sprite_2_1 = engine.Sprite(zoomerTransform2, True)
+        zoomer_sprite_2_1.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 40, 36
+        zoomer_sprite_2_1.setSpriteSheetDimensions(18, 14, 8, 7, 2, 2, 0)
+        zoomer_sprite_2_1.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+        zoomer_sprite_2_2 = engine.Sprite(zoomerTransform2, True)
+        zoomer_sprite_2_2.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 36, 40
+        zoomer_sprite_2_2.setSpriteSheetDimensions(16, 18, 44, 4, 2, 2, 1)
+        zoomer_sprite_2_2.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+        zoomer_sprite_2_3 = engine.Sprite(zoomerTransform2, True)
+        zoomer_sprite_2_3.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 40, 36
+        zoomer_sprite_2_3.setSpriteSheetDimensions(18, 14, 76, 7, 2, 2, 0)
+        zoomer_sprite_2_3.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+        zoomer_sprite_2_4 = engine.Sprite(zoomerTransform2, True)
+        zoomer_sprite_2_4.setRectangleDimensions(self.zoomerSize, self.zoomerSize) # 36, 40
+        zoomer_sprite_2_4.setSpriteSheetDimensions(16, 18, 112, 4, 2, 2, 1)
+        zoomer_sprite_2_4.loadImage('Assets/spritesheets/enemies.png', self.sdl.getSDLRenderer())
+        zoomerObject2.addTileMapComponent(self.tilemap5)
+        zoomerObject2.addPhysicsComponent(zoomerPhysics2)
+        zoomerObject2.addTransformComponent(zoomerTransform2)
+        zoomerObject2.addSpriteComponent(zoomer_sprite_2_1)
+        zoomer2 = Zoomer(zoomerObject2, 0, True)
+        zoomer2.addSpriteToList(zoomer_sprite_2_1, 1)
+        zoomer2.addSpriteToList(zoomer_sprite_2_2, 1)
+        zoomer2.addSpriteToList(zoomer_sprite_2_3, 1)
+        zoomer2.addSpriteToList(zoomer_sprite_2_4, 1)
+        zoomer2.setActiveStatus(True)
+        zoomerObject2.xVel = zoomer2.getCurrentXVelocity()
+        zoomerObject2.yVel = zoomer2.getCurrentYVelocity()
+
+        self.randomArr.append(zoomerObject1)
+        self.randomArr.append(zoomerPhysics1)
+        self.randomArr.append(zoomerTransform1)
+        self.randomArr.append(zoomer_sprite_1_1)
+        self.randomArr.append(zoomer_sprite_1_2)
+        self.randomArr.append(zoomer_sprite_1_3)
+        self.randomArr.append(zoomer_sprite_1_4)
+        self.randomArr.append(zoomerObject2)
+        self.randomArr.append(zoomerPhysics2)
+        self.randomArr.append(zoomerTransform2)
+        self.randomArr.append(zoomer_sprite_2_1)
+        self.randomArr.append(zoomer_sprite_2_2)
+        self.randomArr.append(zoomer_sprite_2_3)
+        self.randomArr.append(zoomer_sprite_2_4)
+
+        self.enemiesDict[str(self.tilemap5)]["zoomerArray"].append(zoomer1)
+        self.enemiesDict[str(self.tilemap5)]["zoomerArray"].append(zoomer2)
+
     def createPowerUpObjects(self):
         self.screwAttackObject = engine.GameObject()
         self.screwAttackPhysics = engine.PhysicsComponent()
@@ -2739,6 +3660,22 @@ class Game:
             tile = ExplodableTile(xPos, yPos, self.tileSize, self.tilemap4, self.sdl)
             tileArr4.append(tile)
         self.explodableTilesDict[str(self.tilemap4)] = tileArr4
+
+    def createFakeTiles(self):
+        self.fakeTilesDict = {}
+        tileArr = []
+        for i in range(11):
+            xPos = self.tileSize * (39 + i)
+            yPos = self.tileSize * 5
+            tile = FakeTile(xPos, yPos, self.tileSize, self.tilemap5, self.sdl)
+            tileArr.append(tile)
+        for i in range(11):
+            xPos = self.tileSize * (39 + i)
+            yPos = self.tileSize * 6
+            tile = FakeTile(xPos, yPos, self.tileSize, self.tilemap5, self.sdl)
+            tileArr.append(tile)
+        self.fakeTilesDict[str(self.tilemap5)] = tileArr
+
     
     def changePlayerSprite(self, sprite):
         # adjusts yPos if necessary and changes sprite
@@ -3060,8 +3997,9 @@ class Game:
             self.rightCamera = engine.SpriteVerticalScrollerCamera(self.windowWidth, self.windowHeight, rightLvlWidth,
                                                                    rightLvlHeight, self.player.mSprite)
             # self.player.addTileMapComponent(nextTilemap)
-            self.player.mJumpComponent.changeInitialY(rightLvlHeight - leftLvlHeight)
-            self.player.mTransform.yPos = rightLvlHeight - (leftLvlHeight - self.player.mTransform.yPos)
+            if curTilemap != self.tilemap5:
+                self.player.mJumpComponent.changeInitialY(rightLvlHeight - leftLvlHeight)
+                self.player.mTransform.yPos = rightLvlHeight - (leftLvlHeight - self.player.mTransform.yPos)
             
         
         if self.sideOrVertDict[str(curTilemap)] == "horizontal":
@@ -3075,8 +4013,12 @@ class Game:
             self.rightCamera.y = self.camera.y
         elif self.sideOrVertDict[str(nextTilemap)] == "vertical":
             self.leftCamera.y = self.camera.y
-            # from the bottom
-            self.rightCamera.y = rightLvlHeight - self.windowHeight
+            if curTilemap == self.tilemap5:
+                # from the top
+                self.rightCamera.y = 0
+            else:
+                # from the bottom
+                self.rightCamera.y = rightLvlHeight - self.windowHeight
 
         self.leftCamera.x = self.camera.x
         self.rightCamera.x = -self.windowWidth
@@ -3153,8 +4095,9 @@ class Game:
         if self.sideOrVertDict[str(nextTilemap)] == "horizontal":
             self.rightCamera.y = self.camera.y
             self.leftCamera.y = leftLvlHeight - self.windowHeight
-            self.player.mJumpComponent.changeInitialY(leftLvlHeight - rightLvlHeight)
-            self.player.mTransform.yPos = leftLvlHeight - (rightLvlHeight - self.player.mTransform.yPos)
+            if nextTilemap != self.tilemap5:
+                self.player.mJumpComponent.changeInitialY(leftLvlHeight - rightLvlHeight)
+                self.player.mTransform.yPos = leftLvlHeight - (rightLvlHeight - self.player.mTransform.yPos)
         elif self.sideOrVertDict[str(nextTilemap)] == "vertical":
             self.rightCamera.y = self.camera.y
             self.leftCamera.y = self.camera.y
@@ -3226,6 +4169,9 @@ class Game:
             if "zoomerArray" in self.enemiesDict[str(tilemap)]:
                 for zoomer in self.enemiesDict[str(tilemap)]["zoomerArray"]:
                     zoomer.setActiveStatus(True)
+            if "waverArray" in self.enemiesDict[str(tilemap)]:
+                for waver in self.enemiesDict[str(tilemap)]["waverArray"]:
+                    waver.setActiveStatus(True)
 
     def UpdateAnimation(self, leftTilemap, rightTilemap):
         if str(leftTilemap) in self.enemiesDict:
@@ -3235,6 +4181,9 @@ class Game:
             if "zoomerArray" in self.enemiesDict[str(leftTilemap)]:
                 for zoomer in self.enemiesDict[str(leftTilemap)]["zoomerArray"]:
                     self.handleZoomerUpdate(zoomer, leftTilemap, True)
+            if "waverArray" in self.enemiesDict[str(leftTilemap)]:
+                for waver in self.enemiesDict[str(leftTilemap)]["waverArray"]:
+                    self.handleWaverUpdate(waver, leftTilemap, True)
         if str(rightTilemap) in self.enemiesDict:
             if "bugArray" in self.enemiesDict[str(rightTilemap)]:
                 for bug in self.enemiesDict[str(rightTilemap)]["bugArray"]:
@@ -3242,6 +4191,9 @@ class Game:
             if "zoomerArray" in self.enemiesDict[str(rightTilemap)]:
                 for zoomer in self.enemiesDict[str(rightTilemap)]["zoomerArray"]:
                     self.handleZoomerUpdate(zoomer, rightTilemap, True)
+            if "waverArray" in self.enemiesDict[str(rightTilemap)]:
+                for waver in self.enemiesDict[str(rightTilemap)]["waverArray"]:
+                    self.handleWaverUpdate(waver, rightTilemap, True)
         if str(leftTilemap) in self.doorObjectsDict.keys():
             for doorObject in self.doorObjectsDict[str(leftTilemap)]:
                 doorObject.mSprite.update(0, 0, 0)
@@ -3261,6 +4213,7 @@ class Game:
         self.renderEnemiesInAnimation(leftTilemap, rightTilemap, leftCamera, rightCamera)
         self.renderDoorObjectsInAnimation(leftTilemap, rightTilemap, leftCamera, rightCamera)
         self.renderBubbleDoorsInAnimation(leftTilemap, rightTilemap, leftCamera, rightCamera)
+        self.renderPlayerDisplay()
         self.sdl.flip()
 
     def renderEnemiesInAnimation(self, leftTilemap, rightTilemap, leftCamera, rightCamera):
@@ -3273,6 +4226,10 @@ class Game:
                 for zoomer in self.enemiesDict[str(leftTilemap)]["zoomerArray"]:
                     if zoomer.isActive():
                         zoomer.getZoomerObject().mSprite.render(self.sdl.getSDLRenderer(), leftCamera.x, leftCamera.y)
+            if "waverArray" in self.enemiesDict[str(leftTilemap)]:
+                for waver in self.enemiesDict[str(leftTilemap)]["waverArray"]:
+                    if waver.isActive():
+                        waver.getWaverObject().mSprite.render(self.sdl.getSDLRenderer(), leftCamera.x, leftCamera.y)
         if str(rightTilemap) in self.enemiesDict:
             if "bugArray" in self.enemiesDict[str(rightTilemap)]:
                 for bug in self.enemiesDict[str(rightTilemap)]["bugArray"]:
@@ -3282,6 +4239,10 @@ class Game:
                 for zoomer in self.enemiesDict[str(rightTilemap)]["zoomerArray"]:
                     if zoomer.isActive():
                         zoomer.getZoomerObject().mSprite.render(self.sdl.getSDLRenderer(), rightCamera.x, rightCamera.y)
+            if "waverArray" in self.enemiesDict[str(rightTilemap)]:
+                for waver in self.enemiesDict[str(rightTilemap)]["waverArray"]:
+                    if waver.isActive():
+                        waver.getWaverObject().mSprite.render(self.sdl.getSDLRenderer(), rightCamera.x, rightCamera.y)
 
     def renderDoorObjectsInAnimation(self, leftTilemap, rightTilemap, leftCamera, rightCamera):
         if str(leftTilemap) in self.doorObjectsDict.keys():
@@ -3345,61 +4306,61 @@ class Game:
                 bullet.xVel = 0
                 bullet.yVel = -self.bulletSpeed
                 bullet.mTransform.xPos = self.player.mTransform.xPos + int(sprite.getWidth() * 0.5)
-                bullet.mTransform.yPos = self.player.mTransform.yPos
+                bullet.mTransform.yPos = self.player.mTransform.yPos + int(sprite.getHeight() * 0.05)
             case self.aim_up_falling_left:
                 bullet.xVel = 0
                 bullet.yVel = -self.bulletSpeed
                 bullet.mTransform.xPos = self.player.mTransform.xPos + int(sprite.getWidth() * 0.25)
-                bullet.mTransform.yPos = self.player.mTransform.yPos
+                bullet.mTransform.yPos = self.player.mTransform.yPos + int(sprite.getHeight() * 0.05)
             case self.aim_up_idle_right:
                 bullet.xVel = 0
                 bullet.yVel = -self.bulletSpeed
                 bullet.mTransform.xPos = self.player.mTransform.xPos + int(sprite.getWidth() * 0.45)
-                bullet.mTransform.yPos = self.player.mTransform.yPos
+                bullet.mTransform.yPos = self.player.mTransform.yPos + int(sprite.getHeight() * 0.05)
             case self.aim_up_idle_left:
                 bullet.xVel = 0
                 bullet.yVel = -self.bulletSpeed
                 bullet.mTransform.xPos = self.player.mTransform.xPos + int(sprite.getWidth() * 0.20)
-                bullet.mTransform.yPos = self.player.mTransform.yPos
+                bullet.mTransform.yPos = self.player.mTransform.yPos + int(sprite.getHeight() * 0.05)
             case self.aim_up_run_right:
                 bullet.xVel = 0
                 bullet.yVel = -self.bulletSpeed
                 bullet.mTransform.xPos = self.player.mTransform.xPos + int(sprite.getWidth() * 0.5)
-                bullet.mTransform.yPos = self.player.mTransform.yPos
+                bullet.mTransform.yPos = self.player.mTransform.yPos + int(sprite.getHeight() * 0.05)
             case self.aim_up_run_left:
                 bullet.xVel = 0
                 bullet.yVel = -self.bulletSpeed
                 bullet.mTransform.xPos = self.player.mTransform.xPos + int(sprite.getWidth() * 0.15)
-                bullet.mTransform.yPos = self.player.mTransform.yPos
+                bullet.mTransform.yPos = self.player.mTransform.yPos + int(sprite.getHeight() * 0.05)
             case self.shooting_falling_right:
                 bullet.xVel = self.bulletSpeed
                 bullet.yVel = 0
-                bullet.mTransform.xPos = self.player.mTransform.xPos + int(sprite.getWidth() * 0.75)
+                bullet.mTransform.xPos = self.player.mTransform.xPos + int(sprite.getWidth() * 0.70)
                 bullet.mTransform.yPos = self.player.mTransform.yPos + int(sprite.getHeight() * 0.30)
             case self.shooting_falling_left:
                 bullet.xVel = -self.bulletSpeed
                 bullet.yVel = 0
-                bullet.mTransform.xPos = self.player.mTransform.xPos
+                bullet.mTransform.xPos = self.player.mTransform.xPos + int(sprite.getWidth() * 0.10)
                 bullet.mTransform.yPos = self.player.mTransform.yPos + int(sprite.getHeight() * 0.30)
             case self.shooting_run_right:
                 bullet.xVel = self.bulletSpeed
                 bullet.yVel = 0
-                bullet.mTransform.xPos = self.player.mTransform.xPos + int(sprite.getWidth() * 0.75)
+                bullet.mTransform.xPos = self.player.mTransform.xPos + int(sprite.getWidth() * 0.60)
                 bullet.mTransform.yPos = self.player.mTransform.yPos + int(sprite.getHeight() * 0.25)
             case self.shooting_run_left:
                 bullet.xVel = -self.bulletSpeed
                 bullet.yVel = 0
-                bullet.mTransform.xPos = self.player.mTransform.xPos
+                bullet.mTransform.xPos = self.player.mTransform.xPos + int(sprite.getWidth() * 0.10)
                 bullet.mTransform.yPos = self.player.mTransform.yPos + int(sprite.getHeight() * 0.25)
             case self.idle_right:
                 bullet.xVel = self.bulletSpeed
                 bullet.yVel = 0
-                bullet.mTransform.xPos = self.player.mTransform.xPos + int(sprite.getWidth() * 0.75)
+                bullet.mTransform.xPos = self.player.mTransform.xPos + int(sprite.getWidth() * 0.60)
                 bullet.mTransform.yPos = self.player.mTransform.yPos + int(sprite.getHeight() * 0.25)
             case self.idle_left:
                 bullet.xVel = -self.bulletSpeed
                 bullet.yVel = 0
-                bullet.mTransform.xPos = self.player.mTransform.xPos
+                bullet.mTransform.xPos = self.player.mTransform.xPos + int(sprite.getWidth() * 0.05)
                 bullet.mTransform.yPos = self.player.mTransform.yPos + int(sprite.getHeight() * 0.25)
             case _:
                 bullet.xVel = 0
@@ -3607,7 +4568,12 @@ class Game:
             if self.player.mTransform.xPos + self.player.mSprite.getWidth() > self.lvlWidth:
                 self.animateRoomChangeToTheRight(self.tilemap, self.tilemapAdjacencyDict[str(self.tilemap)]["right1"])
             elif self.player.mTransform.xPos < 0:
-                self.animateRoomChangeToTheLeft(self.tilemap, self.tilemapAdjacencyDict[str(self.tilemap)]["left1"])
+                # tilemap3 has 2 choices for left now
+                nextTileMap = self.tilemapAdjacencyDict[str(self.tilemap)]["left1"]
+                if self.tilemap == self.tilemap3:
+                    if self.player.mTransform.yPos < self.tileSize * 11:
+                        nextTileMap = self.tilemapAdjacencyDict[str(self.tilemap)]["left2"]
+                self.animateRoomChangeToTheLeft(self.tilemap, nextTileMap)
             else:
                 collision = self.tilemap.isTouchingRightWall(self.player)
                 if collision.isColliding:
@@ -3867,6 +4833,7 @@ class Game:
                                     self.playerIsHit = True
                                     self.playerCannotBeHit = True
                                     self.playerHitSound.PlaySound()
+                                    self.playerDisplay.addHitPoints(bug.getDamageValue())
                                     if bug.getCurrentXDirection() > 0:
                                         self.backupRight = True
                                     else:
@@ -3888,6 +4855,29 @@ class Game:
                                     self.playerIsHit = True
                                     self.playerCannotBeHit = True
                                     self.playerHitSound.PlaySound()
+                                    self.playerDisplay.addHitPoints(zoomer.getDamageValue())
+                                    if self.curXDirection > 0:
+                                        self.backupLeft = True
+                                    else:
+                                        self.backupRight = True
+                if "waverArray" in self.enemiesDict[str(self.tilemap)]:
+                    for waver in self.enemiesDict[str(self.tilemap)]["waverArray"]:
+                        if waver.isActive():
+                            isColliding = waver.checkIfColliding(self.player)
+                            if isColliding:
+                                if self.player.mSprite == self.screw_attack_left or self.player.mSprite == self.screw_attack_right:
+                                    waver.decreaseHitPoints(100)
+                                    if not waver.isActive():
+                                        waverObject = waver.getWaverObject()
+                                        self.createEnemyExplosion(waverObject.mTransform.xPos + waverObject.mSprite.getWidth()/2 - EXPLOSION_WIDTH/2,
+                                                                waverObject.mTransform.yPos + waverObject.mSprite.getHeight()/2 - EXPLOSION_HEIGHT/2)
+                                else:
+                                    self.player.mJumpComponent.EndJump()
+                                    self.uprightJump = False
+                                    self.playerIsHit = True
+                                    self.playerCannotBeHit = True
+                                    self.playerHitSound.PlaySound()
+                                    self.playerDisplay.addHitPoints(waver.getDamageValue())
                                     if self.curXDirection > 0:
                                         self.backupLeft = True
                                     else:
@@ -3937,6 +4927,7 @@ class Game:
             self.energyOrbArr.pop(idx)
             # play sound
             self.energyOrbSound.PlaySound(3)
+            self.playerDisplay.addHitPoints(self.energyOrbValue)
 
 
                     
@@ -4042,6 +5033,9 @@ class Game:
             if "zoomerArray" in self.enemiesDict[str(tilemap)]:
                 for zoomer in self.enemiesDict[str(tilemap)]["zoomerArray"]:
                     self.handleZoomerUpdate(zoomer, tilemap, False)
+            if "waverArray" in self.enemiesDict[str(tilemap)]:
+                for waver in self.enemiesDict[str(tilemap)]["waverArray"]:
+                    self.handleWaverUpdate(waver, tilemap, False)
 
     def getPowerUpFrameCount(self, tilemap):
         res = 0
@@ -4057,7 +5051,106 @@ class Game:
             if self.powerUpActiveDict[str(tilemap)]:
                 self.powerUpDict[str(tilemap)].mSprite.update(0, 0, self.getPowerUpFrameCount(tilemap))
 
-    
+    def handleWaverUpdate(self, waver, tilemap, isAnimating):
+        if waver.isActive():
+            waverObject = waver.getWaverObject()
+            # check if off screen
+            # if (self.player.mTransform.xPos >= waver.getOriginalXPos() + self.windowWidth or self.player.mTransform.xPos <= waver.getOriginalXPos() - self.windowWidth)\
+            #     and (self.player.mTransform.xPos >= waverObject.mTransform.xPos + self.windowWidth\
+            #     or self.player.mTransform.xPos <= waverObject.mTransform.xPos - self.windowWidth) and not isAnimating:
+            #     waver.setActiveStatus(True)
+            #     return
+            # update sprite
+            waverObject.mSprite.update(0, 0, int(waver.getCurrentFrameCount()))
+            #update SineWaveComponent here.....
+            if (waverObject.mSineWaveComponent.isTravelingRight()):
+                #Traveling right
+                waverObject.mTransform.xPos += waver.getXVelocity()
+                self.checkWaverForWallCollision(waver, tilemap, True)
+                waverObject.mSineWaveComponent.UpdateY(waverObject, waverObject.mTransform.xPos)
+                waverObject.mPhysicsComponent.UpdateY(waverObject)
+                self.checkWaverForFloorOrCeilingCollision(waver, tilemap)
+            else:
+                #Traveling left
+                waverObject.mTransform.xPos -= waver.getXVelocity()
+                self.checkWaverForWallCollision(waver, tilemap, False)
+                waverObject.mSineWaveComponent.UpdateY(waverObject, waverObject.mTransform.xPos)
+                waverObject.mPhysicsComponent.UpdateY(waverObject)
+                self.checkWaverForFloorOrCeilingCollision(waver, tilemap)
+            waver.incrementCurrentFrameCount(self.waverFrameIncrement, waver.getMaxFrameCount(0))
+        else:
+            # waver is inActive: reactivate if far enough away from player
+            if self.player.mTransform.xPos >= waver.getOriginalXPos() + self.windowWidth or self.player.mTransform.xPos <= waver.getOriginalXPos() - self.windowWidth:
+                waver.setActiveStatus(True)
+
+    def checkWaverForWallCollision(self, waver, tilemap, isTravelingRight):
+        # incrementWallHitCount(), resetWallHitCount(), timeToReverseDirection()
+        lvlWidth = tilemap.getCols() * self.tileSize
+        waverObject = waver.getWaverObject()
+        if (isTravelingRight):
+            rightWallCollision = tilemap.isTouchingRightWall(waverObject)
+            if rightWallCollision.isColliding:
+                if waver.timeToReverseDirection():
+                    waver.setCurrentSprite(1)
+                    waverObject.mTransform.xPos = self.tileSize * rightWallCollision.firstTileColumn - waverObject.mSprite.getWidth() - 1
+                    waverObject.mSineWaveComponent.reverseDirection()
+                    waver.resetWallHitCount()
+                else:
+                    # let the waver travel along the wall for a bit
+                    waver.incrementWallHitCount()
+                    tempXPos = waverObject.mTransform.xPos
+                    newXPos = self.tileSize * rightWallCollision.firstTileColumn - waverObject.mSprite.getWidth() - 1
+                    xDiff = newXPos - tempXPos
+                    waverObject.mTransform.xPos = newXPos
+                    waverObject.mSineWaveComponent.changeInitialX(xDiff)
+            elif waverObject.mTransform.xPos + waverObject.mSprite.getWidth() >= lvlWidth:
+                waver.setCurrentSprite(1)
+                waverObject.mTransform.xPos = lvlWidth - waverObject.mSprite.getWidth()
+                waverObject.mSineWaveComponent.reverseDirection()
+            else:
+                waver.resetWallHitCount()
+        else:
+            leftWallCollision = tilemap.isTouchingLeftWall(waverObject)
+            if leftWallCollision.isColliding:
+                if waver.timeToReverseDirection():
+                    waver.setCurrentSprite(0)
+                    waverObject.mTransform.xPos = self.tileSize * (leftWallCollision.firstTileColumn + 1) + 1
+                    waverObject.mSineWaveComponent.reverseDirection()
+                    waver.resetWallHitCount()
+                else:
+                    # let the waver travel along the wall for a bit
+                    waver.incrementWallHitCount()
+                    tempXPos = waverObject.mTransform.xPos
+                    newXPos = self.tileSize * (leftWallCollision.firstTileColumn + 1) + 1
+                    xDiff = newXPos - tempXPos
+                    waverObject.mTransform.xPos = newXPos
+                    waverObject.mSineWaveComponent.changeInitialX(xDiff)
+            elif waverObject.mTransform.xPos < 0:
+                waver.setCurrentSprite(0)
+                waverObject.mTransform.xPos = 0
+                waverObject.mSineWaveComponent.reverseDirection()
+            else:
+                waver.resetWallHitCount()
+
+    def checkWaverForFloorOrCeilingCollision(self, waver, tilemap):
+        waverObject = waver.getWaverObject()
+        floorCollision = tilemap.isOnGround(waverObject)
+        if floorCollision.isColliding:
+            tempYPos = waverObject.mTransform.yPos
+            newYPos = self.tileSize * (floorCollision.firstTileRow) - waverObject.mSprite.getHeight() - 1
+            yDiff = newYPos - tempYPos
+            waverObject.mTransform.yPos = newYPos
+            waverObject.mSineWaveComponent.changeInitialY(yDiff)
+        else:
+            ceilingCollision = tilemap.isOnCeiling(waverObject)
+            if ceilingCollision.isColliding:
+                tempYPos = waverObject.mTransform.yPos
+                newYPos = self.tileSize * (ceilingCollision.firstTileRow + 1) + 1
+                yDiff = newYPos - tempYPos
+                waverObject.mTransform.yPos = newYPos
+                waverObject.mSineWaveComponent.changeInitialY(yDiff)
+
+
     def handleBugUpdate(self, bug, tilemap, isAnimating):
         if bug.isActive():
             bugObject = bug.getBugObject()
@@ -4419,6 +5512,18 @@ class Game:
                                         zoomerObject = zoomer.getZoomerObject()
                                         self.createEnemyExplosion(zoomerObject.mTransform.xPos + zoomerObject.mSprite.getWidth()/2 - EXPLOSION_WIDTH/2,
                                                                 zoomerObject.mTransform.yPos + zoomerObject.mSprite.getHeight()/2 - EXPLOSION_HEIGHT/2)
+                if "waverArray" in self.enemiesDict[str(self.tilemap)]:
+                    for waver in self.enemiesDict[str(self.tilemap)]["waverArray"]:
+                        if waver.isActive():
+                            isColliding = waver.checkIfColliding(bullet)
+                            if isColliding:
+                                if key not in destroyArr:
+                                    destroyArr.append(key)
+                                    waver.decreaseHitPoints(1)
+                                    if not waver.isActive():
+                                        waverObject = waver.getWaverObject()
+                                        self.createEnemyExplosion(waverObject.mTransform.xPos + waverObject.mSprite.getWidth()/2 - EXPLOSION_WIDTH/2,
+                                                                waverObject.mTransform.yPos + waverObject.mSprite.getHeight()/2 - EXPLOSION_HEIGHT/2)
         for key in destroyArr:
             del self.bulletDict[key]
             del self.spriteDict[key]
@@ -4455,8 +5560,22 @@ class Game:
                                             zoomerObject = zoomer.getZoomerObject()
                                             self.createEnemyExplosion(zoomerObject.mTransform.xPos + zoomerObject.mSprite.getWidth()/2 - EXPLOSION_WIDTH/2,
                                                                       zoomerObject.mTransform.yPos + zoomerObject.mSprite.getHeight()/2 - EXPLOSION_HEIGHT/2)
+                if "waverArray" in self.enemiesDict[str(self.tilemap)]:
+                    for waver in self.enemiesDict[str(self.tilemap)]["waverArray"]:
+                        if waver.isActive():
+                            if bomb.isExploding():
+                                if str(waver) not in bomb.getEnemyArr():
+                                    isColliding = waver.checkIfColliding(bombObject)
+                                    if isColliding:
+                                        waver.decreaseHitPoints(2)
+                                        bomb.addEnemyToHitArray(str(waver))
+                                        if not waver.isActive():
+                                            waverObject = waver.getWaverObject()
+                                            self.createEnemyExplosion(waverObject.mTransform.xPos + waverObject.mSprite.getWidth()/2 - EXPLOSION_WIDTH/2,
+                                                                      waverObject.mTransform.yPos + waverObject.mSprite.getHeight()/2 - EXPLOSION_HEIGHT/2)
 
-    def bombExplodableTilesUpdate(self):
+    def bombAndBulletExplodableTilesUpdate(self):
+        destroyBulletArr = []
         if str(self.tilemap) in self.explodableTilesDict:
             for tile in self.explodableTilesDict[str(self.tilemap)]:
                 if tile.isActive():
@@ -4465,8 +5584,22 @@ class Game:
                             bombObject = bomb.getBombObject()
                             if tile.checkIfColliding(bombObject):
                                 tile.explodeTile()
+                    
+                    for key in self.bulletDict.keys():
+                        bullet = self.bulletDict[key][0]
+                        isColliding = tile.checkIfColliding(bullet)
+                        if isColliding:
+                            if key not in destroyBulletArr:
+                                destroyBulletArr.append(key)
+                                tile.explodeTile()
                 else:
                     tile.decrementCountDown(self.player)
+        for key in destroyBulletArr:
+            del self.bulletDict[key]
+            del self.spriteDict[key]
+            del self.transformDict[key]
+            del self.physicsDict[key]
+
 
     def enemyExplosionsUpdate(self):
         indexArr = []
@@ -4500,6 +5633,9 @@ class Game:
         for idx in indexArr:
             self.energyOrbArr.pop(idx)
 
+    def updatePlayerDisplay(self):
+        self.playerDisplay.updatePlayerDisplay()
+
     # Update
     def Update(self, inputs):
         # Quit check
@@ -4515,10 +5651,11 @@ class Game:
         self.bulletDoorCollisionUpdate()
         self.bulletEnemiesCollisionUpdate()
         self.bombEnemiesCollisionUpdate()
-        self.bombExplodableTilesUpdate()
+        self.bombAndBulletExplodableTilesUpdate()
         self.doorObjectsUpdate(self.tilemap)
         self.enemyExplosionsUpdate()
         self.energyOrbUpdate()
+        self.updatePlayerDisplay()
         # update camera
         self.camera.Update()
     
@@ -4543,6 +5680,10 @@ class Game:
                 for zoomer in self.enemiesDict[str(tilemap)]["zoomerArray"]:
                     if zoomer.isActive():
                         zoomer.getZoomerObject().mSprite.render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
+            if "waverArray" in self.enemiesDict[str(tilemap)]:
+                for waver in self.enemiesDict[str(tilemap)]["waverArray"]:
+                    if waver.isActive():
+                        waver.getWaverObject().mSprite.render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
 
     def renderBombs(self):
         for bomb in self.bombArr:
@@ -4561,6 +5702,12 @@ class Game:
                 if tile.isActive():
                     tileObject.mSprite.render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
 
+    def renderFakeTiles(self, tilemap):
+        if str(tilemap) in self.fakeTilesDict:
+            for tile in self.fakeTilesDict[str(tilemap)]:
+                tileObject = tile.getTileObject()
+                tileObject.mSprite.render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
+
     def renderEnemyExplosions(self):
         for ex in self.enemyExplosionArr:
             ex.getSprite().render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
@@ -4568,6 +5715,9 @@ class Game:
     def renderEnergyOrbs(self):
         for energyOrb in self.energyOrbArr:
             energyOrb.getEnergyOrbObject().mSprite.render(self.sdl.getSDLRenderer(), self.camera.x, self.camera.y)
+
+    def renderPlayerDisplay(self):
+        self.playerDisplay.renderPlayerDisplay()
 
     # Render
     def Render(self):
@@ -4583,8 +5733,10 @@ class Game:
         self.renderBombs()
         self.renderPowerUp(self.tilemap)
         self.renderExplodableTiles(self.tilemap)
+        self.renderFakeTiles(self.tilemap)
         self.renderEnemyExplosions()
         self.renderEnergyOrbs()
+        self.renderPlayerDisplay()
         self.sdl.flip()
 
     # Starts or re-starts the game

@@ -4,6 +4,7 @@
 #include "ICamera.hpp"
 #include "Transform.hpp"
 #include "JumpComponent.hpp"
+#include "SineWaveComponent.hpp"
 #include "Rectangle.hpp"
 #include "TileMapComponent.hpp"
 #include "GameObject.hpp"
@@ -98,6 +99,7 @@ PYBIND11_MODULE(engine, e) {
         .def("addCamera", &GameObject::addCamera)
         .def("addTransformComponent", &GameObject::addTransformComponent)
         .def("addJumpComponent", &GameObject::addJumpComponent)
+        .def("addSineWaveComponent", &GameObject::addSineWaveComponent)
         .def("addRectangleComponent", &GameObject::addRectangleComponent)
         .def("addPhysicsComponent", &GameObject::addPhysicsComponent)
         .def("addTileMapComponent", &GameObject::addTileMapComponent)
@@ -105,6 +107,7 @@ PYBIND11_MODULE(engine, e) {
         .def("InitiateJump", &GameObject::InitiateJump)
         .def_readwrite("mTransform", &GameObject::mTransform)
         .def_readwrite("mJumpComponent", &GameObject::mJumpComponent)
+        .def_readwrite("mSineWaveComponent", &GameObject::mSineWaveComponent)
         .def_readwrite("mRectangle", &GameObject::mRectangle)
         .def_readwrite("mPhysicsComponent", &GameObject::mPhysicsComponent)
         .def_readwrite("mTileMapComponent", &GameObject::mTileMapComponent)
@@ -120,6 +123,15 @@ PYBIND11_MODULE(engine, e) {
         .def("stillJumping", &JumpComponent::stillJumping)
         .def_readwrite("isJumping", &JumpComponent::isJumping)
         .def_readwrite("xVelocity", &JumpComponent::xVelocity);
+
+    py::class_<SineWaveComponent>(e, "SineWaveComponent")
+        .def(py::init<double, double, int, int, bool>())
+        .def("UpdateY", &SineWaveComponent::UpdateY)
+        .def("changeInitialY", &SineWaveComponent::changeInitialY)
+        .def("changeInitialX", &SineWaveComponent::changeInitialX)
+        .def("reverseDirection", &SineWaveComponent::reverseDirection)
+        .def("restartSineWave", &SineWaveComponent::restartSineWave)
+        .def("isTravelingRight", &SineWaveComponent::isTravelingRight);
 
     py::class_<PhysicsComponent>(e, "PhysicsComponent")
         .def(py::init())

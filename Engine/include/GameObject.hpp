@@ -13,6 +13,7 @@
 #include "ICamera.hpp"
 #include "Transform.hpp"
 #include "JumpComponent.hpp"
+#include "SineWaveComponent.hpp"
 #include "Rectangle.hpp"
 #include "PhysicsComponent.hpp"
 #include "TileMapComponent.hpp"
@@ -20,6 +21,7 @@
 
 class TileMapComponent;
 class JumpComponent;
+class SineWaveComponent;
 
 class GameObject {
     public:
@@ -36,6 +38,7 @@ class GameObject {
 
         void addTransformComponent(Transform* transform);
         void addJumpComponent(JumpComponent* jumpComponent);
+        void addSineWaveComponent(SineWaveComponent* sineWaveComponent);
         void addRectangleComponent(RectangleComponent* rectangle);
         void addPhysicsComponent(PhysicsComponent* physicsComponent);
         void addTileMapComponent(TileMapComponent* tileMapComponent);
@@ -46,6 +49,7 @@ class GameObject {
 
         Transform* mTransform = nullptr;
         JumpComponent* mJumpComponent = nullptr;
+        SineWaveComponent* mSineWaveComponent = nullptr;
         RectangleComponent* mRectangle = nullptr;
         PhysicsComponent* mPhysicsComponent = nullptr;
         TileMapComponent* mTileMapComponent = nullptr;
