@@ -1116,7 +1116,7 @@ class Game:
         self.tilemapAdjacencyDict[str(self.tilemap4)] = {"left1": self.tilemap3, "right1": None}
         self.tilemapAdjacencyDict[str(self.tilemap5)] = {"left1": None, "right1": self.tilemap3}
         # set self.tilemap
-        self.tilemap = self.tilemap4 # TODO: switch back to tilemap1
+        self.tilemap = self.tilemap1 # TODO: switch back to tilemap1
         self.tileSize = self.tilemap.getSize() # 36
 
         # Level size
